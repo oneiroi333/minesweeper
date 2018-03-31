@@ -1,6 +1,7 @@
 #ifndef TITLE_H
 #define TITLE_H
 
+#include <stdlib.h>
 #include <stdint.h>
 
 struct title {

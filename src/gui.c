@@ -12,7 +12,8 @@
 #define OPT_EXIT_SAVE 0
 #define OPT_EXIT_NOSAVE 1
 
-// TODO Not like this!!!
+// TODO
+// this values should be set in game_init() as part of the 'struct title'!!!
 /* title */
 int title_height = 10;
 int title_width = 126;
@@ -48,6 +49,7 @@ gui_main_scr(struct game *game)
 	//char *mark = "\u25BA ";
 	char *mark = "";
 
+#if 0
 	/* Create the menu */
 	menu_items_count = 3;				/* PLAY, OPTIONS, QUIT */
 	items = (ITEM **) malloc((menu_items_count + 1) * sizeof(ITEM *));
@@ -58,42 +60,50 @@ gui_main_scr(struct game *game)
 	menu = new_menu(items);
 	set_menu_spacing(menu, 0, 2, 0);		/* Line spacing */
 	menu_size(menu, &menu_height, &menu_width);
+#endif
 	menu_win = newwin(0, 0, 0, 0);
-	menu_sub_win = derwin(menu_win, menu_height, menu_width, 20, (COLS / 2) - (menu_width / 2));
+#if 0
+	menu_sub_win = derwin(menu_win, menu_height, menu_width, title_height + 10, (COLS / 2) - (menu_width / 2));
 	set_menu_win(menu, menu_win);
 	set_menu_sub(menu, menu_sub_win);
 	set_menu_mark(menu, mark);
 	post_menu(menu);
+#endif
 
+	/* Title */
 	print_title(game, menu_win, 5, (COLS / 2) - (title_width / 2));
+
+	/* Border */
 	box(menu_win, '|', '-');
 	//wborder(menu_win, '+', ' ', ' ',' ',' ',' ',' ',' ');
 	wrefresh(menu_win);
 
+	/* Selection */
 	for(;;) {
 		input = getch();
 		switch(input) {
 		case KEY_DOWN:
-			menu_driver(menu, REQ_DOWN_ITEM);
+			//menu_driver(menu, REQ_DOWN_ITEM);
 			wrefresh(menu_win);
 			break;
 		case KEY_UP:
-			menu_driver(menu, REQ_UP_ITEM);
+			//menu_driver(menu, REQ_UP_ITEM);
 			wrefresh(menu_win);
 			break;
 		case KEY_ENTER:
-			choice = item_index(current_item(menu));
+			//choice = item_index(current_item(menu));
 			goto exit_main;
 		}
 	}
-
 exit_main:
-	unpost_menu(menu);				/* Erase menu */
+#if 0
+	unpost_menu(menu);
 	for(i = 0; i < (menu_items_count + 1); ++i) {
 		free_item(items[i]);
 	}
 	free(items);
 	free_menu(menu);
+#endif
 	delwin(menu_win);
 
 	return choice;
@@ -162,12 +172,7 @@ print_title(struct game *game, WINDOW *win, int row, int col)
 			++row;
 			col = col_start;
 		}
-#if 0
-		if (i % title_width == 0) {
-		}
-#endif
 		mvwprintw(win, row, col, "%lc", game->title.title[i]);
 		col++;
 	}
 }
-
