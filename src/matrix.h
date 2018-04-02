@@ -35,7 +35,7 @@ int matrix_get_value(struct matrix *matrix, int row, int column);
 void matrix_incr(struct matrix *matrix, int row, int column);
 
 /*
- * Dump a matrix
+ * Prints the matrix
  */
 void matrix_dump(struct matrix *matrix, int rows, int columns, FILE *out);
 
@@ -44,4 +44,4 @@ void matrix_dump(struct matrix *matrix, int rows, int columns, FILE *out);
  */
 void matrix_free(struct matrix *matrix);
 
-#endif //MATRIX_H
+#endif /* MATRIX_H */

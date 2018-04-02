@@ -9,28 +9,6 @@
 /* Textual graphic files */
 #define MAIN_TITLE "media/graphic/title"
 
-/* Game states */
-#define NOT_RUNNING 0
-#define RUNNING 1
-#define PAUSED 2
-#define GAME_OVER 3
-
-/* Game outcome */
-#define VICTORY 0
-#define DEFEAT 1
-#define ABORTED 2
-
-/* Difficulty */
-#define BEGINNER 0
-#define ADVANCED 1
-#define EXPERT 2
-#define CUSTOM 3
-
-/* field values */
-#define FLAG_OFF 0
-#define FLAG_ON (-1)
-#define MINE 9
-
 /* Game default settings */
 const int default_difficulty[3][3] = {
 	/* Rows, Columns, Mines */
@@ -48,11 +26,10 @@ const struct controls default_controls = {
 	74		/* TOGGLE FLAG: t */
 };
 
-static void game_set_difficulty(struct game *game, int difficulty, int rows, int columns, int mines);
-static void game_set_controls(struct game *game, const struct controls *controls);
 static void game_title_init(struct game *game);
 static void game_surface_init(struct game *game);
 static void game_minefield_init(struct game *game);
+static int game_get_dead_field_count(struct game *game);
 
 void
 game_init(struct game *game)
@@ -62,15 +39,12 @@ game_init(struct game *game)
 	game->state = NOT_RUNNING;
 	game->outcome = DEFEAT;
 	game_set_difficulty(game, BEGINNER, 0, 0, 0);
-	//
-	// need to consider "dead fields" -> fields without mine or number
-	// game->fields_to_reveal = (game->cfg.rows * game->cfg.columns) - game->cfg.mines - ???dead_fields???;
-	//
-	game->fields_revealed = 0;
 	game_set_controls(game, &default_controls);
 	game_surface_init(game);
 	game_minefield_init(game);
-	game_title_init(game); // should the title be part of the GUI?
+	game->fields_to_reveal = (game->cfg.rows * game->cfg.columns) - game->cfg.mines - game_get_dead_field_count(game); /* get_dead_field_count() needs to get called after game_minefield_init() */
+	game->fields_revealed = 0;
+	game_title_init(game);
 }
 
 void
@@ -122,7 +96,7 @@ game_toggle_flag(struct game *game, int row, int column)
 	}
 }
 
-static void
+void
 game_set_difficulty(struct game *game, int difficulty, int rows, int columns, int mines)
 {
 	game->cfg.difficulty = difficulty;
@@ -137,7 +111,7 @@ game_set_difficulty(struct game *game, int difficulty, int rows, int columns, in
 	}
 }
 
-static void
+void
 game_set_controls(struct game *game, const struct controls *controls)
 {
 	game->controls.up = controls->up;
@@ -146,6 +120,12 @@ game_set_controls(struct game *game, const struct controls *controls)
 	game->controls.right = controls->right;
 	game->controls.reveal = controls->reveal;
 	game->controls.toggle_flag = controls->toggle_flag;
+}
+
+int
+game_get_value(struct game *game, int row, int column)
+{
+	return matrix_get_value(game->surface, row, column);
 }
 
 static void
@@ -301,4 +281,21 @@ game_minefield_init(struct game *game)
 			}
 		}
 	}
+}
+
+static int
+game_get_dead_field_count(struct game *game)
+{
+	int i, j, cnt;
+
+	cnt = 0;
+	for(i = 0; i < game->cfg.rows; ++i) {
+		for (j = 0; j < game->cfg.columns; ++j) {
+			if (!matrix_get_value(game->minefield, i, j)) {
+				++cnt;
+			}
+		}
+	}
+
+	return cnt;
 }
