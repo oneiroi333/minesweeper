@@ -26,12 +26,10 @@
 #define EXPERT 2
 #define CUSTOM 3
 
-/* Game surface field states */
+/* field values */
 #define FLAG_OFF 0
 #define FLAG_ON (-1)
-
 #define MINE 9
-#define FLAG L'\u2690'
 
 /* Game default settings */
 const int default_difficulty[3][3] = {
@@ -73,35 +71,11 @@ game_init(struct game *game)
 	game_surface_init(game);
 	game_minefield_init(game);
 	game_title_init(game); // should the title be part of the GUI?
-
-	gui_init();
-}
-
-void
-game_run(struct game *game)
-{
-	int choice;
-
-	do {
-		choice = gui_main_scr(game);
-		switch(choice) {
-		case PLAY:
-			gui_game_scr(game);
-			break;
-		case OPTIONS:
-			gui_options_scr(game);
-			break;
-		default: /* QUIT */
-			;
-		}
-	} while (choice != QUIT);
 }
 
 void
 game_destroy(struct game *game)
 {
-	gui_destroy();
-
 	matrix_free(game->surface);
 	matrix_free(game->minefield);
 	free(game->title.title);

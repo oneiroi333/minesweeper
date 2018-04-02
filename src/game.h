@@ -19,9 +19,7 @@ struct game {
 };
 
 void game_init(struct game *game);
-void game_run(struct game *game);
 void game_destroy(struct game *game);
-
 void game_reveal(struct game *game, int row, int column);
 void game_toggle_flag(struct game *game, int row, int column);
 

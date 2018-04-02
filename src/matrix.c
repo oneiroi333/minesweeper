@@ -46,14 +46,12 @@ matrix_dump(struct matrix *m, int rows, int columns, FILE *out)
 {
 	int i, j;
 
-	fprintf(out, "=================[ Matrix dump ]=================\n\n");
 	for (i = 0; i < rows; i++) {
 		for (j = 0; j < columns; j++) {
 			fprintf(out, "%d ", m->table[i][j]);
 		}
 		fprintf(out, "\n");
 	}
-	fprintf(out, "\n===============================================\n");
 }
 
 void

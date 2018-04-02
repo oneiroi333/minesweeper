@@ -10,6 +10,15 @@
 #define OPTIONS 1
 #define QUIT 2
 
+struct gui {
+	struct menu {
+		WINDOW *menu_win;
+		MENU *menu;
+	} menu;
+	WINDOW *game_win;
+	WINDOW *options_win;
+};
+
 /*
  * Init ncurses stuff
  */
@@ -19,21 +28,21 @@ void gui_init(void);
  * Show main menu screen and handle player input.
  * Return selected menu option.
  */
-int gui_main_scr(struct game *game);
+int gui_menu_show(struct game *game, struct gui *gui);
 
 /*
  * Show the actual game screen and handle player actions.
  */
-void gui_game_scr(struct game *game);
+void gui_game_show(struct game *game, struct gui *gui);
 
 /*
  * Show options screen and handle player selection.
  */
-void gui_options_scr(struct game *game);
+void gui_options_show(struct game *game, struct gui *gui);
 
 /*
- * Destroy all ncurses stuff
+ * Destroy all windows and ncurses
  */
-void gui_destroy(void);
+void gui_destroy(struct gui *gui);
 
 #endif /* GUI_H */
