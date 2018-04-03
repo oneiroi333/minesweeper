@@ -13,30 +13,68 @@
 #define OPT_EXIT_SAVE 0
 #define OPT_EXIT_NOSAVE 1
 
-/* Surface field symbols */
-#define FIELD_DEFAULT L'\u2591'
-#define FIELD_FLAG L'\u2690'
+/* Field symbols */
+#define SYM_FLAG_OFF L'\u2591'
+#define SYM_FLAG_ON L'\u2690'
+#define SYM_MINE L'X'
+#define SYM_EMPTY L' '
 
 /* Grid symbols */
-#define GRID_T L'\u252c'	/* top */
-#define GRID_TL L'\u250c'	/* top-left */
-#define GRID_TR L'\u2510'	/* top-right */
-#define GRID_B L'\u2534'	/* bottom */
-#define GRID_BL L'\u2514'	/* bottom-left */
-#define GRID_BR L'\u2518'	/* bottom-right */
-#define GRID_L L'\u251c'	/* left */
-#define GRID_R L'\u2524'	/* right */
-#define GRID_X L'\u253c'	/* intersection */
-#define GRID_H L'\u2500'	/* vertical */
-#define GRID_V L'\u2502'	/* horizontal */
+#define SYM_GRID_T L'\u252c'	/* top */
+#define SYM_GRID_TL L'\u250c'	/* top-left */
+#define SYM_GRID_TR L'\u2510'	/* top-right */
+#define SYM_GRID_B L'\u2534'	/* bottom */
+#define SYM_GRID_BL L'\u2514'	/* bottom-left */
+#define SYM_GRID_BR L'\u2518'	/* bottom-right */
+#define SYM_GRID_L L'\u251c'	/* left */
+#define SYM_GRID_R L'\u2524'	/* right */
+#define SYM_GRID_X L'\u253c'	/* intersection */
+#define SYM_GRID_H L'\u2500'	/* vertical */
+#define SYM_GRID_V L'\u2502'	/* horizontal */
 
 /* Color pairs */
-#define COLOR_MAIN_TITLE 1
-#define COLOR_GAME_CURSOR 2
+#define COLOR_BLACK   0
+#define COLOR_RED     1
+#define COLOR_GREEN   2
+#define COLOR_YELLOW  3
+#define COLOR_BLUE    4
+#define COLOR_MAGENTA 5
+#define COLOR_CYAN    6
+#define COLOR_WHITE   7
 
-#define X_CENTER(container, obj) \
+#define CENTER(container, obj) \
 	((container / 2) - (obj / 2))
 
+#define COMPUTE_COLOR(val, color)		\
+	do {					\
+		if (val < 1) {			\
+			color = COLOR_WHITE;	\
+		} else if (val < 6) {		\
+			color = val + 1;	\
+		} else {			\
+			color = val - 5;	\
+		}				\
+	} while (0)
+
+#define COMPUTE_SYMBOL(val, symbol)		\
+	do {					\
+		if (val > 0) {			\
+			symbol = L'0' + val;	\
+		} else if (val == FLAG_OFF) {	\
+			symbol = SYM_FLAG_OFF;	\
+		} else if (val == FLAG_ON) {	\
+			symbol = SYM_FLAG_ON;	\
+		} else {			\
+			symbol = SYM_EMPTY;	\
+		}				\
+	} while (0)
+
+static void menu_size(MENU *menu, int *height, int *width);
+static void print_title(struct game *game, WINDOW *win, int row, int col);
+static void print_field(WINDOW *win, int row, int col, int color, uint32_t symbol);
+static void gui_game_over_show(struct game *game, WINDOW *win);
+static void print_game_with_grid(struct game *game, WINDOW *win);
+static void print_game_without_grid(struct game *game, WINDOW *win);
 
 // TODO
 // this values should be set in game_init() in relation to the 'struct title'!!!
@@ -47,15 +85,16 @@ int title_margin_top = 3;
 int title_margin_bottom = 3;
 //int offset_top = title_height + title_margin_top + title_margin_bottom;
 int offset_top = 16;
-
-
-static void menu_size(MENU *menu, int *height, int *width);
-static void print_title(struct game *game, WINDOW *win, int row, int col);
-static void gui_game_print_field(WINDOW *win, int row, int col, int field_val);
+int menu_bar_win_height = 1;
+int menu_bar_win_width = 126;
+int game_over_win_height = 1;
+int game_over_win_width = 28;
 
 void
 gui_init(void)
 {
+	int i;
+
 	initscr();					/* Init curses mode */
 	noecho();					/* Dont show input data */
 	curs_set(0);					/* Make cursor invisible */
@@ -63,8 +102,9 @@ gui_init(void)
 	start_color();					/* Enable colors */
 	keypad(stdscr, TRUE);				/* Enable the keypad */
 	/* Init color pairs */
-	init_pair(COLOR_MAIN_TITLE, COLOR_RED, COLOR_BLACK);
-	init_pair(COLOR_GAME_CURSOR, COLOR_RED, COLOR_BLACK);
+	for (i = 0; i < 8; ++i) {
+		init_pair(i, i, COLOR_BLACK);
+	}
 }
 
 int
@@ -81,11 +121,9 @@ gui_menu_show(struct game *game, struct gui *gui)
 	menu = gui->menu.menu;
 	if (!menu_win) {
 		/* Print title */
-		wattron(stdscr, COLOR_PAIR(COLOR_MAIN_TITLE));
-		print_title(game, stdscr, title_margin_top, X_CENTER(COLS, title_width));
-		wattroff(stdscr, COLOR_PAIR(COLOR_MAIN_TITLE));
-		mvwprintw(stdscr, 1, X_CENTER(COLS, title_width), "%s", "F1: QUIT TO MENU");
-
+		wattron(stdscr, COLOR_PAIR(COLOR_RED));
+		print_title(game, stdscr, title_margin_top, CENTER(COLS, title_width));
+		wattroff(stdscr, COLOR_PAIR(COLOR_RED));
 		wrefresh(stdscr);
 
 		/* Create the menu */
@@ -98,7 +136,7 @@ gui_menu_show(struct game *game, struct gui *gui)
 		set_menu_spacing(menu, 0, 2, 0);		/* Line spacing */
 		menu_size(menu, &menu_height, &menu_width);
 		menu_y_start = offset_top;
-		menu_x_start = X_CENTER(COLS, menu_width);
+		menu_x_start = CENTER(COLS, menu_width);
 		menu_win = newwin(menu_height, menu_width, menu_y_start, menu_x_start);
 		menu_sub_win = derwin(menu_win, menu_height, menu_width, 0, 0);
 		set_menu_win(menu, menu_win);
@@ -111,16 +149,13 @@ gui_menu_show(struct game *game, struct gui *gui)
 	/* Menu selection */
 	for(;;) {
 		input = getch();
-		switch(input) {
-		case KEY_DOWN:
-			menu_driver(menu, REQ_DOWN_ITEM);
-			wrefresh(menu_win);
-			break;
-		case KEY_UP:
+		if (input == game->controls.up) {
 			menu_driver(menu, REQ_UP_ITEM);
 			wrefresh(menu_win);
-			break;
-		case KEY_ENTER:
+		} else if (input == game->controls.down) {
+			menu_driver(menu, REQ_DOWN_ITEM);
+			wrefresh(menu_win);
+		} else if (input == game->controls.reveal) {
 			choice = item_index(current_item(menu));
 			werase(menu_win);
 			wrefresh(menu_win);
@@ -132,103 +167,51 @@ gui_menu_show(struct game *game, struct gui *gui)
 void
 gui_game_show(struct game *game, struct gui *gui)
 {
-	WINDOW *game_win;
+	WINDOW *game_win, *menu_bar_win, *game_over_win;
 	int game_win_height, game_win_width;
-	int row, col, row_m, col_m;
-	int input;
-	uint32_t field_val;
+	int row, col, row_m, col_m, field_val, grid_thickness;
+	int input, color;
+	uint32_t symbol;
+
+	row_m = col_m = 0;
+	if (game->cfg.grid == GRID_OFF) {
+		game_win_height = game->cfg.rows;
+		game_win_width = game->cfg.columns;
+		row = col = 0;
+		grid_thickness = 0;
+	} else {
+		game_win_height = (game->cfg.rows * 2) + 1;
+		game_win_width = (game->cfg.columns * 2) + 1;
+		row = col = 1;
+		grid_thickness = 1;
+	}
 
 	game_win = gui->game_win;
-	/* account for border */
-	game_win_height = (game->cfg.rows * 2) + 1;
-	game_win_width = (game->cfg.columns * 2) + 1;
+	menu_bar_win = gui->menu_bar_win;
+	game_over_win = gui->game_over_win;
 	if (!game_win) {
-		game_win = newwin(game_win_height, game_win_width, offset_top, X_CENTER(COLS, game_win_width));
+		game_win = newwin(game_win_height, game_win_width, offset_top, CENTER(COLS, game_win_width));
+	}
+	if (!menu_bar_win) {
+		menu_bar_win = newwin(menu_bar_win_height, menu_bar_win_width, offset_top - 2, CENTER(COLS, menu_bar_win_width));
+	}
+	if (!game_over_win) {
+		game_over_win = newwin(game_win_height, game_win_width, offset_top, CENTER(COLS, game_win_width));
 	}
 
-	row = col = 0;
-	row_m = col_m = 0;
-#ifdef GRID
-	/* Print top border */
-	mvwprintw(game_win, row, col, "%lc", GRID_TL);
-	for (col = 1; col < game_win_width - 1; ++col) {
-		if (col % 2) {
-			mvwprintw(game_win, row, col, "%lc", GRID_H);
-		} else {
-			mvwprintw(game_win, row, col, "%lc", GRID_T);
-		}
-	}
-	mvwprintw(game_win, row++, col, "%lc", GRID_TR);
-#endif
-	/* Print the middle part */
-	for (; row < game_win_height - 1; ++row) {
-		if (row % 2) {
-			for (col = 0; col < game_win_width; ++col) {
-				if (col % 2) {
-					field_val = game_get_value(game, row_m, col_m);
-					gui_game_print_field(game_win, row, col, field_val);
-					++col_m;
-				} else {
-#ifdef GRID
-					mvwprintw(game_win, row, col, "%lc", GRID_V);
-#endif
-				}
-			}
-			col_m = 0;
-			++row_m;
-		} else {
-#ifdef GRID
-			for (col = 0; col < game_win_width; ++col) {
-				if (col == 0) {
-					mvwprintw(game_win, row, col, "%lc", GRID_L);
-				} else if (col == game_win_width - 1) {
-					mvwprintw(game_win, row, col, "%lc", GRID_R);
-				} else if (col % 2) {
-					mvwprintw(game_win, row, col, "%lc", GRID_H);
-				} else {
-					mvwprintw(game_win, row, col, "%lc", GRID_X);
-				}
-			}
-#endif
-		}
-	}
-#ifdef GRID
-	/* Print bottom border */
-	col = 0;
-	mvwprintw(game_win, row, col, "%lc", GRID_BL);
-	for (col = 1; col < game_win_width - 1; ++col) {
-		if (col % 2) {
-			mvwprintw(game_win, row, col, "%lc", GRID_H);
-		} else {
-			mvwprintw(game_win, row, col, "%lc", GRID_B);
-		}
-	}
-	mvwprintw(game_win, row, col, "%lc", GRID_BR);
-#endif
-	wrefresh(game_win);
+	/* Print menu bar */
+	mvwprintw(menu_bar_win, 0, 0, "%s", "F1: QUIT");
+	wrefresh(menu_bar_win);
 
-#if 0
-	/* TODO Timer */
-	if (game->state == RUNNING) {
-		// start timer
-	} else if (game->state == PAUSED) {
-		game->state = RUNNING;
-		// resume timer
-	} else if (game->state == ABORTED) {
-		game->state = NOT_RUNNING;
-		// stop timer
+	/* Print game field */
+	if (game->cfg.grid == GRID_OFF) {
+		print_game_without_grid(game, game_win);
+	} else {
+		print_game_with_grid(game, game_win);
 	}
-#endif
-
-	/* New game */
-	row_m = col_m = 0;
-	row = col = 1;
 
 	/* Highlight start field */
-	wattron(game_win, COLOR_PAIR(COLOR_GAME_CURSOR));
-	field_val = game_get_value(game, row_m, col_m);
-	gui_game_print_field(game_win, row, col, field_val);
-	wattroff(game_win, COLOR_PAIR(COLOR_GAME_CURSOR));
+	print_field(game_win, row, col, COLOR_RED, SYM_FLAG_OFF);
 	wrefresh(game_win);
 
 	/* Handle player input */
@@ -240,14 +223,15 @@ gui_game_show(struct game *game, struct gui *gui)
 			}
 			/* Remove highlight of the previous field */
 			field_val = game_get_value(game, row_m, col_m);
-			gui_game_print_field(game_win, row, col, field_val);
+			COMPUTE_COLOR(field_val, color);
+			COMPUTE_SYMBOL(field_val, symbol);
+			print_field(game_win, row, col, color, symbol);
 			--row_m;
-			row -= 2;
+			row -= (1 + grid_thickness);
 			/* Hightlight the new field */
-			wattron(game_win, COLOR_PAIR(COLOR_GAME_CURSOR));
 			field_val = game_get_value(game, row_m, col_m);
-			gui_game_print_field(game_win, row, col, field_val);
-			wattroff(game_win, COLOR_PAIR(COLOR_GAME_CURSOR));
+			COMPUTE_SYMBOL(field_val, symbol);
+			print_field(game_win, row, col, COLOR_RED, symbol);
 			wrefresh(game_win);
 		} else if (input == game->controls.down) {
 			if (row_m == game->cfg.rows - 1) {
@@ -255,14 +239,15 @@ gui_game_show(struct game *game, struct gui *gui)
 			}
 			/* Remove highlight of the previous field */
 			field_val = game_get_value(game, row_m, col_m);
-			gui_game_print_field(game_win, row, col, field_val);
+			COMPUTE_COLOR(field_val, color);
+			COMPUTE_SYMBOL(field_val, symbol);
+			print_field(game_win, row, col, color, symbol);
 			++row_m;
-			row += 2;
+			row += (1 + grid_thickness);
 			/* Hightlight the new field */
-			wattron(game_win, COLOR_PAIR(COLOR_GAME_CURSOR));
 			field_val = game_get_value(game, row_m, col_m);
-			gui_game_print_field(game_win, row, col, field_val);
-			wattroff(game_win, COLOR_PAIR(COLOR_GAME_CURSOR));
+			COMPUTE_SYMBOL(field_val, symbol);
+			print_field(game_win, row, col, COLOR_RED, symbol);
 			wrefresh(game_win);
 		} else if (input == game->controls.left) {
 			if (col_m == 0) {
@@ -270,14 +255,15 @@ gui_game_show(struct game *game, struct gui *gui)
 			}
 			/* Remove highlight of the previous field */
 			field_val = game_get_value(game, row_m, col_m);
-			gui_game_print_field(game_win, row, col, field_val);
+			COMPUTE_COLOR(field_val, color);
+			COMPUTE_SYMBOL(field_val, symbol);
+			print_field(game_win, row, col, color, symbol);
 			--col_m;
-			col -= 2;
+			col -= (1 + grid_thickness);
 			/* Hightlight the new field */
-			wattron(game_win, COLOR_PAIR(COLOR_GAME_CURSOR));
 			field_val = game_get_value(game, row_m, col_m);
-			gui_game_print_field(game_win, row, col, field_val);
-			wattroff(game_win, COLOR_PAIR(COLOR_GAME_CURSOR));
+			COMPUTE_SYMBOL(field_val, symbol);
+			print_field(game_win, row, col, COLOR_RED, symbol);
 			wrefresh(game_win);
 		} else if (input == game->controls.right) {
 			if (col_m == game->cfg.columns - 1) {
@@ -285,28 +271,29 @@ gui_game_show(struct game *game, struct gui *gui)
 			}
 			/* Remove highlight of the previous field */
 			field_val = game_get_value(game, row_m, col_m);
-			gui_game_print_field(game_win, row, col, field_val);
+			COMPUTE_COLOR(field_val, color);
+			COMPUTE_SYMBOL(field_val, symbol);
+			print_field(game_win, row, col, color, symbol);
 			++col_m;
-			col += 2;
+			col += (1 + grid_thickness);
 			/* Hightlight the new field */
-			wattron(game_win, COLOR_PAIR(COLOR_GAME_CURSOR));
 			field_val = game_get_value(game, row_m, col_m);
-			gui_game_print_field(game_win, row, col, field_val);
-			wattroff(game_win, COLOR_PAIR(COLOR_GAME_CURSOR));
+			COMPUTE_SYMBOL(field_val, symbol);
+			print_field(game_win, row, col, COLOR_RED, symbol);
 			wrefresh(game_win);
 		} else if (input == game->controls.reveal) {
-			game_reveal(game, row, col);
-			wattron(game_win, COLOR_PAIR(COLOR_GAME_CURSOR));
+			game_reveal(game, row_m, col_m);
 			field_val = game_get_value(game, row_m, col_m);
-			gui_game_print_field(game_win, row, col, field_val);
-			wattroff(game_win, COLOR_PAIR(COLOR_GAME_CURSOR));
+			COMPUTE_COLOR(field_val, color);
+			COMPUTE_SYMBOL(field_val, symbol);
+			print_field(game_win, row, col, color, symbol);
 			wrefresh(game_win);
 		} else if (input == game->controls.toggle_flag) {
-			game_toggle_flag(game, row, col);
-			wattron(game_win, COLOR_PAIR(COLOR_GAME_CURSOR));
+			game_toggle_flag(game, row_m, col_m);
 			field_val = game_get_value(game, row_m, col_m);
-			gui_game_print_field(game_win, row, col, field_val);
-			wattroff(game_win, COLOR_PAIR(COLOR_GAME_CURSOR));
+			COMPUTE_COLOR(field_val, color);
+			COMPUTE_SYMBOL(field_val, symbol);
+			print_field(game_win, row, col, color, symbol);
 			wrefresh(game_win);
 		} else if (input == KEY_F(1)) {
 			game->state = ABORTED;
@@ -314,6 +301,10 @@ gui_game_show(struct game *game, struct gui *gui)
 	}
 	werase(game_win);
 	wrefresh(game_win);
+	werase(menu_bar_win);
+	wrefresh(menu_bar_win);
+
+	gui_game_over_show(game, game_over_win);
 }
 
 void
@@ -323,7 +314,7 @@ gui_options_show(struct game *game, struct gui *gui)
 
 	opts_win = gui->options_win;
 	if (!opts_win) {
-		opts_win = newwin(10, 20, offset_top, X_CENTER(COLS, 20));
+		opts_win = newwin(10, 20, offset_top, CENTER(COLS, 20));
 	}
 
 	mvwprintw(opts_win, 0, 0, "in options window");
@@ -355,10 +346,34 @@ gui_destroy(struct gui *gui)
 	if (gui->game_win) {
 		delwin(gui->game_win);
 	}
+	if (gui->menu_bar_win) {
+		delwin(gui->menu_bar_win);
+	}
+	if (gui->game_over_win) {
+		delwin(gui->game_over_win);
+	}
 	if (gui->options_win) {
 		delwin(gui->options_win);
 	}
 	endwin();					/* End ncurses mode */
+}
+
+static void
+gui_game_over_show(struct game *game, WINDOW *win)
+{
+	werase(win);
+	if (game->state == GAME_OVER && game->outcome == VICTORY) {
+		mvwprintw(win, 0, 0, "%s", "YOU DID ESCAPE THIS TIME!");
+		wrefresh(win);
+	} else if (game->state == GAME_OVER && game->outcome == DEFEAT) {
+		mvwprintw(win, 0, 0, "%s", "YOU DIED A HORRIBLE DEATH!");
+		wrefresh(win);
+	} else {
+		return;
+	}
+	getch();
+	werase(win);
+	wrefresh(win);
 }
 
 static void
@@ -391,14 +406,81 @@ print_title(struct game *game, WINDOW *win, int row, int col)
 }
 
 static void
-gui_game_print_field(WINDOW *win, int row, int col, int field_val)
+print_field(WINDOW *win, int row, int col, int color, uint32_t symbol)
 {
-	if (field_val == FLAG_OFF) {
-		field_val = FIELD_DEFAULT;
-	} else if (field_val == FLAG_ON) {
-		field_val = FIELD_FLAG;
-	} else {
-		field_val = L'0' + field_val;
+	wattron(win, COLOR_PAIR(color));
+	mvwprintw(win, row, col, "%lc", symbol);
+	wattroff(win, COLOR_PAIR(color));
+}
+
+static void
+print_game_with_grid(struct game *game, WINDOW *win)
+{
+	int row, col, row_m, col_m, win_height, win_width;
+
+	win_height = (game->cfg.rows * 2) + 1;
+	win_width = (game->cfg.columns * 2) + 1;
+	row = col = 0;
+	row_m = col_m = 0;
+	/* Print top border */
+	mvwprintw(win, row, col, "%lc", SYM_GRID_TL);
+	for (col = 1; col < win_width - 1; ++col) {
+		if (col % 2) {
+			mvwprintw(win, row, col, "%lc", SYM_GRID_H);
+		} else {
+			mvwprintw(win, row, col, "%lc", SYM_GRID_T);
+		}
 	}
-	mvwprintw(win, row, col, "%lc", field_val);
+	mvwprintw(win, row++, col, "%lc", SYM_GRID_TR);
+	/* Print the middle part */
+	for (; row < win_height - 1; ++row) {
+		if (row % 2) {
+			for (col = 0; col < win_width; ++col) {
+				if (col % 2) {
+					print_field(win, row, col, COLOR_WHITE, SYM_FLAG_OFF);
+					++col_m;
+				} else {
+					mvwprintw(win, row, col, "%lc", SYM_GRID_V);
+				}
+			}
+			col_m = 0;
+			++row_m;
+		} else {
+			for (col = 0; col < win_width; ++col) {
+				if (col == 0) {
+					mvwprintw(win, row, col, "%lc", SYM_GRID_L);
+				} else if (col == win_width - 1) {
+					mvwprintw(win, row, col, "%lc", SYM_GRID_R);
+				} else if (col % 2) {
+					mvwprintw(win, row, col, "%lc", SYM_GRID_H);
+				} else {
+					mvwprintw(win, row, col, "%lc", SYM_GRID_X);
+				}
+			}
+		}
+	}
+	/* Print bottom border */
+	col = 0;
+	mvwprintw(win, row, col, "%lc", SYM_GRID_BL);
+	for (col = 1; col < win_width - 1; ++col) {
+		if (col % 2) {
+			mvwprintw(win, row, col, "%lc", SYM_GRID_H);
+		} else {
+			mvwprintw(win, row, col, "%lc", SYM_GRID_B);
+		}
+	}
+	mvwprintw(win, row, col, "%lc", SYM_GRID_BR);
+	wrefresh(win);
+}
+
+static void
+print_game_without_grid(struct game *game, WINDOW *win)
+{
+	int row, col;
+
+	for (row = 0; row < game->cfg.rows; ++row) {
+		for (col = 0; col < game->cfg.columns; ++col) {
+			print_field(win, row, col, COLOR_WHITE, SYM_FLAG_OFF);
+		}
+	}
 }

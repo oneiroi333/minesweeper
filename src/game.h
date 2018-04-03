@@ -24,8 +24,9 @@
 #define CUSTOM 3
 
 /* surface field values */
-#define FLAG_OFF 0
-#define FLAG_ON (-1)
+#define FIELD_EMPTY 0
+#define FLAG_OFF (-1)
+#define FLAG_ON (-2)
 
 /* minefield field values */
 #define MINE 9
@@ -43,6 +44,7 @@ struct game {
 };
 
 void game_init(struct game *game);
+void game_reinit(struct game *game);
 void game_destroy(struct game *game);
 void game_reveal(struct game *game, int row, int column);
 void game_toggle_flag(struct game *game, int row, int column);

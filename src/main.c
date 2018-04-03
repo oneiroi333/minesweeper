@@ -17,6 +17,7 @@ main(int argc, char *argv[])
 		case PLAY:
 			game.state = RUNNING;
 			gui_game_show(&game, &gui);
+			game_reinit(&game);
 			break;
 		case OPTIONS:
 			gui_options_show(&game, &gui);

@@ -16,6 +16,8 @@ struct gui {
 		MENU *menu;
 	} menu;
 	WINDOW *game_win;
+	WINDOW *menu_bar_win;
+	WINDOW *game_over_win;
 	WINDOW *options_win;
 };
 

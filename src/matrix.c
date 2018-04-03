@@ -61,9 +61,6 @@ matrix_free(struct matrix *m)
 	free(m);
 }
 
-/*
- * Static functions
- */
 static void
 matrix_table_init(struct matrix *m, int rows, int columns, int initial_value)
 {
