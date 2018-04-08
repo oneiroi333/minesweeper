@@ -3,16 +3,6 @@
 #include <string.h>
 #include "gui.h"
 
-/* Enter key code */
-#ifdef KEY_ENTER
-#undef KEY_ENTER
-#endif
-#define KEY_ENTER 0xA
-
-/* options: exit with or w/o save */
-#define OPT_EXIT_SAVE 0
-#define OPT_EXIT_NOSAVE 1
-
 /* Field symbols */
 #define SYM_FLAG_OFF L'\u2591'
 #define SYM_FLAG_ON L'\u2690'

@@ -6,6 +6,12 @@
 #include "utf8_lib.h"
 #include "utils.h"
 
+/* Enter key code */
+#ifdef KEY_ENTER
+#undef KEY_ENTER
+#endif
+#define KEY_ENTER 0xA
+
 /* Textual graphic files */
 #define PATH_TITLE "media/graphic/title"
 #define PATH_SKULL "media/graphic/skull"
@@ -19,14 +25,13 @@ const int default_difficulty[3][3] = {
 };
 
 const struct controls default_controls = {
-#if 0
 	KEY_UP,		/* MOVE UP */
 	KEY_DOWN,	/* MOVE DOWN */
 	KEY_LEFT,	/* MOVE LEFT */
 	KEY_RIGHT,	/* MOVE RIGHT */
 	114,		/* REVEAL */ /* r */
 	116		/* TOGGLE FLAG */ /* t */
-#endif
+#if 0
 	/* vim like */
 	107, /* k */
 	106, /* j */
@@ -34,6 +39,7 @@ const struct controls default_controls = {
 	108, /* l */
 	100, /* d */
 	102 /* f */
+#endif
 };
 
 static void game_title_init(struct game *game);
@@ -44,6 +50,7 @@ static void game_minefield_init(struct game *game);
 static void game_minefield_reinit(struct game *game);
 static void game_minefield_set_numbers(struct game *game);
 //static int game_get_dead_field_count(struct game *game);
+static int game_get_field_mine_count(struct game *game, int row, int col);
 
 void
 game_init(struct game *game)
@@ -86,7 +93,14 @@ game_destroy(struct game *game)
 void
 game_reveal(struct game *game, int row, int column)
 {
-	int field_val;
+	int field_val, i, j, nmines;
+
+	/* If less flags then the amount required by the field number are set nothings happens */
+
+	nmines = game_get_field_mine_count(game, row, column);
+	if (matrix_get_value(game->surface, row, column) >= 0) {
+		return;
+	}
 
 	/* The field is already revealed */
 	if (matrix_get_value(game->surface, row, column) >= 0) {
@@ -386,3 +400,41 @@ game_get_dead_field_count(struct game *game)
 	return cnt;
 }
 #endif
+
+static int
+game_get_field_mine_count(struct game *game, int row, int col)
+{
+	int i, cur_row, cur_col, cnt;
+
+	cnt = 0;
+	/* Check top row */
+	cur_row = row - 1;
+	for (int i = -1; i < 2; ++i) {
+		cur_col = col + i;
+		if (matrix_get_value(game->minefield, cur_row, cur_col) == MINE) {
+			++cnt;
+		}
+	}
+	/* Check left and right neighbour cell */
+	if (matrix_get_value(game->minefield, row, col - 1) == MINE) {
+		++cnt;
+	}
+	if (matrix_get_value(game->minefield, row, col + 1) == MINE) {
+		++cnt;
+	}
+	/* Check bottom row */
+	cur_row = row + 1;
+	for (int i = -1; i < 2; ++i) {
+		cur_col = col + i;
+		if (matrix_get_value(game->minefield, cur_row, cur_col) == MINE) {
+			++cnt;
+		}
+	}
+
+	return cnt;
+}
+
+static int
+game_flags_match_mines(struct game *game, int row, int col)
+{
+}
