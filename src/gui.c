@@ -2,6 +2,13 @@
 #include <stdint.h>
 #include <string.h>
 #include "gui.h"
+#include "colors.h"
+
+/* Enter key code */
+#ifdef KEY_ENTER
+#undef KEY_ENTER
+#endif
+#define KEY_ENTER 0xA
 
 /* Field symbols */
 #define SYM_FLAG_OFF L'\u2591'
@@ -21,16 +28,6 @@
 #define SYM_GRID_X L'\u253c'	/* intersection */
 #define SYM_GRID_H L'\u2500'	/* vertical */
 #define SYM_GRID_V L'\u2502'	/* horizontal */
-
-/* Color pairs */
-#define COLOR_BLACK   0
-#define COLOR_RED     1
-#define COLOR_GREEN   2
-#define COLOR_YELLOW  3
-#define COLOR_BLUE    4
-#define COLOR_MAGENTA 5
-#define COLOR_CYAN    6
-#define COLOR_WHITE   7
 
 #define CENTER(container, obj) \
 	((container / 2) - (obj / 2))
@@ -73,7 +70,6 @@ int title_height = 10;
 int title_width = 126;
 int title_margin_top = 3;
 int title_margin_bottom = 3;
-//int offset_top = title_height + title_margin_top + title_margin_bottom;
 int offset_top = 16;
 int menu_bar_win_height = 1;
 int menu_bar_win_width = 126;
@@ -139,13 +135,13 @@ gui_menu_show(struct game *game, struct gui *gui)
 	/* Menu selection */
 	for(;;) {
 		input = getch();
-		if (input == game->controls.up) {
+		if (input == KEY_UP) {
 			menu_driver(menu, REQ_UP_ITEM);
 			wrefresh(menu_win);
-		} else if (input == game->controls.down) {
+		} else if (input == KEY_DOWN) {
 			menu_driver(menu, REQ_DOWN_ITEM);
 			wrefresh(menu_win);
-		} else if (input == game->controls.reveal) {
+		} else if (input == KEY_ENTER) {
 			choice = item_index(current_item(menu));
 			werase(menu_win);
 			wrefresh(menu_win);
@@ -194,10 +190,10 @@ gui_game_show(struct game *game, struct gui *gui)
 	wrefresh(menu_bar_win);
 
 	/* Print game field */
-	if (game->cfg.grid == GRID_OFF) {
-		print_game_without_grid(game, game_win);
-	} else {
+	if (game->cfg.grid == GRID_ON) {
 		print_game_with_grid(game, game_win);
+	} else {
+		print_game_without_grid(game, game_win);
 	}
 
 	/* Highlight start field */
@@ -413,12 +409,15 @@ print_game_with_grid(struct game *game, WINDOW *win)
 	row = col = 0;
 	row_m = col_m = 0;
 	/* Print top border */
-	mvwprintw(win, row, col, "%lc", SYM_GRID_TL);
+	print_field(win, row, col, game->cfg.grid_color, SYM_GRID_TL);
+	//mvwprintw(win, row, col, "%lc", SYM_GRID_TL);
 	for (col = 1; col < win_width - 1; ++col) {
 		if (col % 2) {
-			mvwprintw(win, row, col, "%lc", SYM_GRID_H);
+			print_field(win, row, col, game->cfg.grid_color, SYM_GRID_H);
+			//mvwprintw(win, row, col, "%lc", SYM_GRID_H);
 		} else {
-			mvwprintw(win, row, col, "%lc", SYM_GRID_T);
+			print_field(win, row, col, game->cfg.grid_color, SYM_GRID_T);
+			//mvwprintw(win, row, col, "%lc", SYM_GRID_T);
 		}
 	}
 	mvwprintw(win, row++, col, "%lc", SYM_GRID_TR);
@@ -430,7 +429,8 @@ print_game_with_grid(struct game *game, WINDOW *win)
 					print_field(win, row, col, COLOR_WHITE, SYM_FLAG_OFF);
 					++col_m;
 				} else {
-					mvwprintw(win, row, col, "%lc", SYM_GRID_V);
+					print_field(win, row, col, game->cfg.grid_color, SYM_GRID_V);
+					//mvwprintw(win, row, col, "%lc", SYM_GRID_V);
 				}
 			}
 			col_m = 0;
@@ -438,28 +438,37 @@ print_game_with_grid(struct game *game, WINDOW *win)
 		} else {
 			for (col = 0; col < win_width; ++col) {
 				if (col == 0) {
-					mvwprintw(win, row, col, "%lc", SYM_GRID_L);
+					print_field(win, row, col, game->cfg.grid_color, SYM_GRID_L);
+					//mvwprintw(win, row, col, "%lc", SYM_GRID_L);
 				} else if (col == win_width - 1) {
-					mvwprintw(win, row, col, "%lc", SYM_GRID_R);
+					print_field(win, row, col, game->cfg.grid_color, SYM_GRID_R);
+					//mvwprintw(win, row, col, "%lc", SYM_GRID_R);
 				} else if (col % 2) {
-					mvwprintw(win, row, col, "%lc", SYM_GRID_H);
+					print_field(win, row, col, game->cfg.grid_color, SYM_GRID_H);
+					//mvwprintw(win, row, col, "%lc", SYM_GRID_H);
 				} else {
-					mvwprintw(win, row, col, "%lc", SYM_GRID_X);
+					print_field(win, row, col, game->cfg.grid_color, SYM_GRID_X);
+					//mvwprintw(win, row, col, "%lc", SYM_GRID_X);
 				}
 			}
 		}
 	}
 	/* Print bottom border */
 	col = 0;
-	mvwprintw(win, row, col, "%lc", SYM_GRID_BL);
+	print_field(win, row, col, game->cfg.grid_color, SYM_GRID_BL);
+	//mvwprintw(win, row, col, "%lc", SYM_GRID_BL);
 	for (col = 1; col < win_width - 1; ++col) {
 		if (col % 2) {
-			mvwprintw(win, row, col, "%lc", SYM_GRID_H);
+			print_field(win, row, col, game->cfg.grid_color, SYM_GRID_H);
+			//mvwprintw(win, row, col, "%lc", SYM_GRID_H);
 		} else {
-			mvwprintw(win, row, col, "%lc", SYM_GRID_B);
+			print_field(win, row, col, game->cfg.grid_color, SYM_GRID_B);
+			//mvwprintw(win, row, col, "%lc", SYM_GRID_B);
 		}
 	}
-	mvwprintw(win, row, col, "%lc", SYM_GRID_BR);
+	print_field(win, row, col, game->cfg.grid_color, SYM_GRID_BR);
+	//mvwprintw(win, row, col, "%lc", SYM_GRID_BR);
+
 	wrefresh(win);
 }
 

@@ -11,6 +11,7 @@ struct configuration {
 	int columns;
 	int mines;
 	int grid;
+	int grid_color;
 };
 
 #endif /* CONFIGURATION_H */

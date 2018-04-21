@@ -5,12 +5,7 @@
 #include "gui.h"
 #include "utf8_lib.h"
 #include "utils.h"
-
-/* Enter key code */
-#ifdef KEY_ENTER
-#undef KEY_ENTER
-#endif
-#define KEY_ENTER 0xA
+#include "colors.h"
 
 /* Textual graphic files */
 #define PATH_TITLE "media/graphic/title"
@@ -45,12 +40,10 @@ const struct controls default_controls = {
 static void game_title_init(struct game *game);
 static void game_surface_init(struct game *game);
 static void game_surface_reinit(struct game *game);
-static void game_surface_expand_empty_field(struct game *game, int row, int col);
 static void game_minefield_init(struct game *game);
 static void game_minefield_reinit(struct game *game);
 static void game_minefield_set_numbers(struct game *game);
-//static int game_get_dead_field_count(struct game *game);
-static int game_get_field_mine_count(struct game *game, int row, int col);
+//static int game_get_field_mine_count(struct game *game, int row, int col);
 
 void
 game_init(struct game *game)
@@ -61,13 +54,12 @@ game_init(struct game *game)
 	game->outcome = DEFEAT;
 	game_set_difficulty(game, BEGINNER, 0, 0, 0);
 	game->cfg.grid = GRID_ON;
+	game->cfg.grid_color = COLOR_WHITE;
 	game_set_controls(game, &default_controls);
 	game_surface_init(game);
 	game_minefield_init(game);
-#if 0
-	game->fields_to_reveal = (game->cfg.rows * game->cfg.columns) - game->cfg.mines - game_get_dead_field_count(game);
 	game->fields_revealed = 0;
-#endif
+	game->fields_to_reveal = (game->cfg.rows * game->cfg.columns) - game->cfg.mines;
 	game_title_init(game);
 }
 
@@ -76,10 +68,8 @@ game_reinit(struct game *game)
 {
 	game_surface_reinit(game);
 	game_minefield_reinit(game);
-#if 0
-	game->fields_to_reveal = (game->cfg.rows * game->cfg.columns) - game->cfg.mines - game_get_dead_field_count(game);
 	game->fields_revealed = 0;
-#endif
+	game->fields_to_reveal = (game->cfg.rows * game->cfg.columns) - game->cfg.mines;
 }
 
 void
@@ -95,36 +85,46 @@ game_reveal(struct game *game, int row, int column)
 {
 	int field_val, i, j, nmines;
 
-	/* If less flags then the amount required by the field number are set nothings happens */
-
-	nmines = game_get_field_mine_count(game, row, column);
-	if (matrix_get_value(game->surface, row, column) >= 0) {
-		return;
-	}
-
-	/* The field is already revealed */
+	/*
+	 * If the field is already revealed or is an empty field do nothing
+	 */
 	if (matrix_get_value(game->surface, row, column) >= 0) {
 		return;
 	}
 
 	field_val = matrix_get_value(game->minefield, row, column);
-	if (field_val == MINE) {
-		game->outcome = DEFEAT;
-		game->state = GAME_OVER;
+
+	/*
+	 * If the field is a number reveal it and check for win condition
+	 * If the field is a mine the game is over
+	 */
+	if (field_val > 0) {
+		if (field_val != MINE) {
+			matrix_set_value(game->surface, row, column, field_val);
+			game->fields_revealed++;
+			if (game->fields_revealed == game->fields_to_reveal) {
+				game->state = GAME_OVER;
+				game->outcome = VICTORY;
+			}
+		} else {
+			game->state = GAME_OVER;
+			game->outcome = DEFEAT;
+		}
 		return;
 	}
+
+	/*
+	 * If the field is an empty field recursively reveal the empty fields connected to it
+	 */
 	if (field_val == FIELD_EMPTY) {
-		// expand empty fields
+		// TODO recursive reveal:
+		// for every neighbour cell
+		// 	if field is a number
+		// 		reveal the field
+		// 	else if the field is empty
+		// 		call this function for the field
 		matrix_set_value(game->surface, row, column, field_val);
-	} else {
-		matrix_set_value(game->surface, row, column, field_val);
-		/*
-		game->fields_revealed++;
-		if (game->fields_revealed == game->fields_to_reveal) {
-			game->state = GAME_OVER;
-			game->outcome = VICTORY;
-		}
-		*/
+		return;
 	}
 }
 
@@ -134,10 +134,6 @@ game_toggle_flag(struct game *game, int row, int column)
 	int field_val;
 
 	field_val = matrix_get_value(game->surface, row, column);
-	/* Field already revealed */
-	if (field_val >= 0) {
-		return;
-	}
 	switch (field_val) {
 	case FLAG_OFF:
 		matrix_set_value(game->surface, row, column, FLAG_ON);
@@ -377,30 +373,7 @@ game_minefield_set_numbers(struct game *game)
 	}
 }
 
-static void
-game_surface_expand_empty_field(struct game *game, int row, int col)
-{
-}
-
 #if 0
-static int
-game_get_dead_field_count(struct game *game)
-{
-	int i, j, cnt;
-
-	cnt = 0;
-	for(i = 0; i < game->cfg.rows; ++i) {
-		for (j = 0; j < game->cfg.columns; ++j) {
-			if (!matrix_get_value(game->minefield, i, j)) {
-				++cnt;
-			}
-		}
-	}
-
-	return cnt;
-}
-#endif
-
 static int
 game_get_field_mine_count(struct game *game, int row, int col)
 {
@@ -433,8 +406,4 @@ game_get_field_mine_count(struct game *game, int row, int col)
 
 	return cnt;
 }
-
-static int
-game_flags_match_mines(struct game *game, int row, int col)
-{
-}
+#endif
