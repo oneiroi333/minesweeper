@@ -2,7 +2,10 @@
 #include <stdint.h>
 #include <string.h>
 #include "gui.h"
+#include "utf8_lib.h"
+#include "utils.h"
 #include "colors.h"
+#include "graphics.h"
 
 /* Enter key code */
 #ifdef KEY_ENTER
@@ -73,8 +76,8 @@ int title_margin_bottom = 3;
 int offset_top = 16;
 int menu_bar_win_height = 1;
 int menu_bar_win_width = 126;
-int game_over_win_height = 1;
-int game_over_win_width = 28;
+int game_over_win_height = 20;
+int game_over_win_width = 126;
 
 void
 gui_init(struct gui *gui)
@@ -183,7 +186,7 @@ gui_game_show(struct game *game, struct gui *gui)
 		menu_bar_win = newwin(menu_bar_win_height, menu_bar_win_width, offset_top - 2, CENTER(COLS, menu_bar_win_width));
 	}
 	if (!game_over_win) {
-		game_over_win = newwin(game_win_height, game_win_width, offset_top, CENTER(COLS, game_win_width));
+		game_over_win = newwin(game_over_win_height, game_over_win_width, offset_top, CENTER(COLS, game_over_win_width));
 	}
 
 	/* Print menu bar */
@@ -348,15 +351,26 @@ gui_destroy(struct gui *gui)
 static void
 gui_game_over_show(struct game *game, WINDOW *win)
 {
-	werase(win);
-	if (game->state == GAME_OVER && game->outcome == VICTORY) {
-		mvwprintw(win, 0, 0, "%s", "YOU DID ESCAPE THIS TIME!");
+	char *skull;
+	int len, i, col, col_start, row;
+	
+	skull = read_file(PATH_SKULL);
+	len = strlen(skull);
+	col = col_start = row = 0;
+	if (is_valid_utf8(skull, len)) {
+		for (i = 0; i < len; ++i, ++col) {
+			if (skull[i] == '\n') {
+				++row;
+				col = col_start - 1; // why -1 ????
+			}
+			mvwprintw(win, row, col, "%lc", skull[i]);
+		}
+		if (game->state == GAME_OVER && game->outcome == VICTORY) {
+			mvwprintw(win, 15, 60, "%s", "YOU DID ESCAPE THIS TIME!");
+		} else if (game->state == GAME_OVER && game->outcome == DEFEAT) {
+			mvwprintw(win, 15, 60, "%s", "YOU DIED A HORRIBLE DEATH!");
+		}
 		wrefresh(win);
-	} else if (game->state == GAME_OVER && game->outcome == DEFEAT) {
-		mvwprintw(win, 0, 0, "%s", "YOU DIED A HORRIBLE DEATH!");
-		wrefresh(win);
-	} else {
-		return;
 	}
 	getch();
 	werase(win);
