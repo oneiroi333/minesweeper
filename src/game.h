@@ -2,7 +2,7 @@
 #define GAME_H
 
 #include "title.h"
-#include "configuration.h"
+#include "config.h"
 #include "controls.h"
 #include "matrix.h"
 

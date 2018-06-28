@@ -77,7 +77,7 @@ int game_over_win_height = 1;
 int game_over_win_width = 28;
 
 void
-gui_init(void)
+gui_init(struct gui *gui)
 {
 	int i;
 
@@ -91,6 +91,7 @@ gui_init(void)
 	for (i = 0; i < 8; ++i) {
 		init_pair(i, i, COLOR_BLACK);
 	}
+	memset(gui, 0, sizeof(struct gui));
 }
 
 int
