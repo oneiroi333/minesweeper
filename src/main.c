@@ -9,7 +9,7 @@ main(int argc, char *argv[])
 	int choice;
 
 	game_init(&game);
-	gui_init();
+	gui_init(&gui);
 
 	do {
 		choice = gui_menu_show(&game, &gui);

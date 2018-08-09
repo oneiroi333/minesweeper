@@ -6,10 +6,7 @@
 #include "utf8_lib.h"
 #include "utils.h"
 #include "colors.h"
-
-/* Textual graphic files */
-#define PATH_TITLE "media/graphic/title"
-#define PATH_SKULL "media/graphic/skull"
+#include "graphics.h"
 
 /* Game default settings */
 const int default_difficulty[3][3] = {
@@ -194,6 +191,7 @@ game_title_init(struct game *game)
 		game->title.title = NULL;
 		game->title.len = 0;
 	}
+	free(title);
 }
 
 static void

@@ -24,7 +24,7 @@ struct gui {
 /*
  * Init ncurses stuff
  */
-void gui_init(void);
+void gui_init(struct gui *gui);
 
 /*
  * Show main menu screen and handle player input.
