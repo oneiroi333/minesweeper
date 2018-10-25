@@ -5,7 +5,7 @@
 #include "utf8_lib.h"
 #include "utils.h"
 #include "colors.h"
-#include "graphics.h"
+#include "ascii.h"
 
 /* Enter key code */
 #ifdef KEY_ENTER

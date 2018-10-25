@@ -6,7 +6,7 @@
 #include "utf8_lib.h"
 #include "utils.h"
 #include "colors.h"
-#include "graphics.h"
+#include "ascii.h"
 
 /* Game default settings */
 const int default_difficulty[3][3] = {
@@ -33,6 +33,10 @@ const struct controls default_controls = {
 	102 /* f */
 #endif
 };
+
+extern default_difficulty;
+extern default_controls;
+
 
 static void game_title_init(struct game *game);
 static void game_surface_init(struct game *game);
