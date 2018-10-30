@@ -498,3 +498,23 @@ print_game_without_grid(struct game *game, WINDOW *win)
 		}
 	}
 }
+
+static void
+game_title_init(struct game *game)
+{
+	char *title;
+	int len;
+	size_t ucs4_len;
+
+	title = read_file(PATH_TITLE);
+	len = strlen(title);
+	if (is_valid_utf8(title, len)) {
+		game->title.title = utf8_to_ucs4(title, len, &ucs4_len);
+		game->title.len = ucs4_len;
+	} else {
+		game->title.title = NULL;
+		game->title.len = 0;
+	}
+	free(title);
+}
+

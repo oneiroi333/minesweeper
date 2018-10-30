@@ -4,6 +4,9 @@
 #include <assert.h>
 #include "utils.h"
 
+#define CFG_MAX_LINE_LEN 100
+#define CFG_MAX_TOKEN_LEN 10
+
 int *
 get_unique_rnd_array(int min, int max, int size)
 {
@@ -60,3 +63,59 @@ read_file(char *filename)
 
 	return buf;
 }
+
+int
+parse_config(struct config *cfg, char *path)
+{
+	FILE *fp;
+	char buf_line[CFG_MAX_LINE_LEN];
+	char buf_token[CFG_MAX_TOKEN_LEN];
+	char *src;
+
+	fp = fopen(path, "r");
+	if (fp == NULL ) {
+		return -1;
+	}
+	while (get_line(buf_line, CFG_MAX_LINE_LEN, path)) {
+		src = buf_line;
+		src = get_token(buf_token, CFG_MAX_TOKEN_LEN, src);
+		switch (buf_token) {
+			case "token starts with bla do this":
+				// read next value tokens
+				break
+			case "token that":
+				// read next value tokens
+				break
+		}
+	}
+
+	return 0;
+}
+
+int
+get_line(char *dst, int size, char *src)
+{
+	int nchar;
+
+	for (nchar = 0; nchar < size - 1; ++nchar, ++dst, ++src) {
+		if (*src == '\n' || *src == EOF) {
+			break;
+		}
+		*dst = *src;
+	}
+	*dst = '\0';
+
+	return nchar;
+}
+
+char *
+get_token(char *dst, int size, char *src)
+{
+	char *next_token_addr;
+	int token_len;
+
+	token_addr =
+
+	return token_len;
+}
+
