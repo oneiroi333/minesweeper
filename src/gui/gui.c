@@ -3,34 +3,18 @@
 #include <string.h>
 #include "gui.h"
 #include "utf8_lib.h"
-#include "utils.h"
 #include "colors.h"
-#include "ascii.h"
+#include "graphics.h"
+#include "symbols.h"
+#include "../core/game.h"
+#include "../core/utils.h"
 
-/* Enter key code */
+extern struct game *game_p;
+
 #ifdef KEY_ENTER
 #undef KEY_ENTER
 #endif
 #define KEY_ENTER 0xA
-
-/* Field symbols */
-#define SYM_FLAG_OFF L'\u2591'
-#define SYM_FLAG_ON L'\u2690'
-#define SYM_MINE L'X'
-#define SYM_EMPTY L' '
-
-/* Grid symbols */
-#define SYM_GRID_T L'\u252c'	/* top */
-#define SYM_GRID_TL L'\u250c'	/* top-left */
-#define SYM_GRID_TR L'\u2510'	/* top-right */
-#define SYM_GRID_B L'\u2534'	/* bottom */
-#define SYM_GRID_BL L'\u2514'	/* bottom-left */
-#define SYM_GRID_BR L'\u2518'	/* bottom-right */
-#define SYM_GRID_L L'\u251c'	/* left */
-#define SYM_GRID_R L'\u2524'	/* right */
-#define SYM_GRID_X L'\u253c'	/* intersection */
-#define SYM_GRID_H L'\u2500'	/* vertical */
-#define SYM_GRID_V L'\u2502'	/* horizontal */
 
 #define CENTER(container, obj) \
 	((container / 2) - (obj / 2))
@@ -50,113 +34,203 @@
 	do {					\
 		if (val > 0) {			\
 			symbol = L'0' + val;	\
-		} else if (val == FLAG_OFF) {	\
+		} else if (val == FIELD_FLAG_OFF) {	\
 			symbol = SYM_FLAG_OFF;	\
-		} else if (val == FLAG_ON) {	\
+		} else if (val == FIELD_FLAG_ON) {	\
 			symbol = SYM_FLAG_ON;	\
 		} else {			\
 			symbol = SYM_EMPTY;	\
 		}				\
 	} while (0)
 
+int gui_menu_show(struct gui *gui);
+static void gui_game_show(struct gui *gui);
+static void gui_options_show(struct gui *gui);
+
+static void gui_menu_size_get(MENU *menu, int *width, int *height);
+static void gui_print_title(struct gui *gui, WINDOW *win, int start_pos_y, int start_pos_x);
+
+/*
 static void menu_size(MENU *menu, int *height, int *width);
-static void print_title(struct game *game, WINDOW *win, int row, int col);
 static void print_field(WINDOW *win, int row, int col, int color, uint32_t symbol);
 static void gui_game_over_show(struct game *game, WINDOW *win);
 static void print_game_with_grid(struct game *game, WINDOW *win);
 static void print_game_without_grid(struct game *game, WINDOW *win);
-
-// TODO
-// this values should be set in game_init() in relation to the 'struct title'!!!
-/* title */
-int title_height = 10;
-int title_width = 126;
-int title_margin_top = 3;
-int title_margin_bottom = 3;
-int offset_top = 16;
-int menu_bar_win_height = 1;
-int menu_bar_win_width = 126;
-int game_over_win_height = 20;
-int game_over_win_width = 126;
+*/
 
 void
 gui_init(struct gui *gui)
 {
-	int i;
+	WINDOW *menu_win, *menu_sub_win;
+	MENU *menu;
+	ITEM **items;
+	int i, title_len;
+	size_t ucs4_len;
+	char *title;
 
+	/* Ncurses stuff */
 	initscr();					/* Init curses mode */
-	noecho();					/* Dont show input data */
+	noecho();					/* Dont echo input data */
 	curs_set(0);					/* Make cursor invisible */
 	cbreak();					/* Line buffering disabled, pass every char on */
 	start_color();					/* Enable colors */
 	keypad(stdscr, TRUE);				/* Enable the keypad */
-	/* Init color pairs */
-	for (i = 0; i < 8; ++i) {
+	for (i = 0; i < COLOR_COUNT; ++i) {		/* Init color pairs (background: black) */
 		init_pair(i, i, COLOR_BLACK);
 	}
-	memset(gui, 0, sizeof(struct gui));
+
+	/* Init title */
+	gui->title.title_win.width = 126;		/* title max line length */
+	gui->title.title_win.height = 10;		/* title line count */
+	gui->title.title_win.pos_y = 3;
+	gui->title.title_win.pos_x = CENTER(COLS, gui->title.title_win.width);
+	gui->title.title_win.win = newwin(gui->title.title_win.height, gui->title.title_win.width, gui->title.title_win.pos_y, gui->title.title_win.pos_x);
+	title = read_file(PATH_TITLE);
+	title_len = strlen(title);
+	if (is_valid_utf8(title, title_len)) {
+		gui->title.data = utf8_to_ucs4(title, title_len, &ucs4_len);
+		gui->title.data_len = ucs4_len;
+	} else {
+		gui->title.data = NULL;
+		gui->title.data_len = 0;
+	}
+	free(title);
+
+	/* Init menu */
+	items = (ITEM **) malloc(4 * sizeof(ITEM *));
+	items[0] = new_item("PLAY", "");
+	items[1] = new_item("OPTIONS", "");
+	items[2] = new_item("QUIT", "");
+	items[3] = (ITEM *) NULL;
+	menu = new_menu(items);
+	set_menu_spacing(menu, 0, 2, 0);		/* Line spacing */
+	gui_menu_size_get(menu, &gui->menu.menu_win.width, &gui->menu.menu_win.height);
+
+	gui->menu.menu_win.pos_y = 16;
+	gui->menu.menu_win.pos_x = CENTER(COLS, gui->menu.menu_win.width);
+
+	menu_win = newwin(gui->menu.menu_win.height, gui->menu.menu_win.width, gui->menu.menu_win.pos_y, gui->menu.menu_win.pos_x);
+	menu_sub_win = derwin(menu_win, gui->menu.menu_win.height, gui->menu.menu_win.width, 0, 0);
+	set_menu_win(menu, menu_win);
+	set_menu_sub(menu, menu_sub_win);
+	set_menu_mark(menu, "");
+	post_menu(menu);
+
+	gui->menu.menu_win.win = menu_win;
+	gui->menu.menu = menu;
+
+	/* Init game */
+	gui->game.game_play_win.win = NULL; /* set window size before game start depending on the size of the minefield (currently done) OR set a max width and height for the minefield and init the window here with max size */
+	gui->game.game_over_win.win = NULL;
+	gui->game.game_menu_bar_win.win = NULL;
+
+	/* Init options */
+	gui->options.options_win.win = newwin(10, 20, 16, CENTER(COLS, 20));
+}
+
+void
+gui_run(struct gui *gui)
+{
+	int choice;
+
+	do {
+		choice = gui_menu_show(gui);
+		switch (choice) {
+			case OPT_PLAY:
+				gui_game_show(gui);
+				break;
+			case OPT_OPTIONS:
+				gui_options_show(gui);
+				break;
+			default:
+				;
+		}
+	} while (choice != OPT_QUIT);
+}
+
+void
+gui_destroy(struct gui *gui)
+{
+	ITEM **items;
+	int i;
+
+	/* Delete title */
+	if (gui->title.title_win.win) {
+		delwin(gui->title.title_win.win);
+	}
+	free(gui->title.data);
+
+	/* Delete menu */
+	if (gui->menu.menu) {
+		unpost_menu(gui->menu.menu);
+		items = menu_items(gui->menu.menu);
+		for(i = 0; i < (item_count(gui->menu.menu) + 1); ++i) {
+			free_item(items[i]);
+		}
+		free(items);
+		free_menu(gui->menu.menu);
+	}
+	/* Delete menu win */
+	if (gui->menu.menu_win.win) {
+		delwin(gui->menu.menu_win.win);
+	}
+
+	/* Delete game win */
+	if (gui->game.game_play_win.win) {
+		delwin(gui->game.game_play_win.win);
+	}
+	if (gui->game.game_over_win.win) {
+		delwin(gui->game.game_over_win.win);
+	}
+	if (gui->game.game_menu_bar_win.win) {
+		delwin(gui->game.game_menu_bar_win.win);
+	}
+
+	/* Delete options win */
+	if (gui->options.options_win.win) {
+		delwin(gui->options.options_win.win);
+	}
+
+	/* End ncurses mode */
+	endwin();
 }
 
 int
-gui_menu_show(struct game *game, struct gui *gui)
+gui_menu_show(struct gui *gui)
 {
-	WINDOW *menu_win, *menu_sub_win;
-	MENU *menu;
-	ITEM **items;
-	int menu_height, menu_width, menu_y_start, menu_x_start;
-	int input, choice, i;
-	char *mark = "";
+	int input;
+	struct controls *controls;
 
-	menu_win = gui->menu.menu_win;
-	menu = gui->menu.menu;
-	if (!menu_win) {
-		/* Print title */
-		wattron(stdscr, COLOR_PAIR(COLOR_RED));
-		print_title(game, stdscr, title_margin_top, CENTER(COLS, title_width));
-		wattroff(stdscr, COLOR_PAIR(COLOR_RED));
-		wrefresh(stdscr);
+	controls = game_config_controls_get(game_p);
 
-		/* Create the menu */
-		items = (ITEM **) malloc(4 * sizeof(ITEM *));
-		items[0] = new_item("PLAY", "");
-		items[1] = new_item("OPTIONS", "");
-		items[2] = new_item("QUIT", "");
-		items[3] = (ITEM *) NULL;
-		menu = new_menu(items);
-		set_menu_spacing(menu, 0, 2, 0);		/* Line spacing */
-		menu_size(menu, &menu_height, &menu_width);
-		menu_y_start = offset_top;
-		menu_x_start = CENTER(COLS, menu_width);
-		menu_win = newwin(menu_height, menu_width, menu_y_start, menu_x_start);
-		menu_sub_win = derwin(menu_win, menu_height, menu_width, 0, 0);
-		set_menu_win(menu, menu_win);
-		set_menu_sub(menu, menu_sub_win);
-		set_menu_mark(menu, mark);
-		post_menu(menu);
-	}
-	wrefresh(menu_win);
+	/* Print title */
+	wattron(gui->title.title_win.win, COLOR_PAIR(COLOR_RED));
+	gui_print_title(gui, gui->title.title_win.win, 0, 0);
+	wattroff(gui->title.title_win.win, COLOR_PAIR(COLOR_RED));
+	wrefresh(gui->title.title_win.win);
 
-	/* Menu selection */
+	/* Print menu*/
+	wrefresh(gui->menu.menu_win.win);
 	for(;;) {
 		input = getch();
-		if (input == KEY_UP) {
-			menu_driver(menu, REQ_UP_ITEM);
-			wrefresh(menu_win);
-		} else if (input == KEY_DOWN) {
-			menu_driver(menu, REQ_DOWN_ITEM);
-			wrefresh(menu_win);
-		} else if (input == KEY_ENTER) {
-			choice = item_index(current_item(menu));
-			werase(menu_win);
-			wrefresh(menu_win);
-			return choice;
+		if (input == controls->up) {
+			menu_driver(gui->menu.menu, REQ_UP_ITEM);
+			wrefresh(gui->menu.menu_win.win);
+		} else if (input == controls->down) {
+			menu_driver(gui->menu.menu, REQ_DOWN_ITEM);
+			wrefresh(gui->menu.menu_win.win);
+		} else if (input == controls->reveal) {
+			werase(gui->menu.menu_win.win);
+			wrefresh(gui->menu.menu_win.win);
+			return item_index(current_item(gui->menu.menu));
 		}
 	}
 }
 
 void
-gui_game_show(struct game *game, struct gui *gui)
+gui_game_show(struct gui *gui)
 {
+#if 0
 	WINDOW *game_win, *menu_bar_win, *game_over_win;
 	int game_win_height, game_win_width;
 	int row, col, row_m, col_m, field_val, grid_thickness;
@@ -295,65 +369,28 @@ gui_game_show(struct game *game, struct gui *gui)
 	wrefresh(menu_bar_win);
 
 	gui_game_over_show(game, game_over_win);
+#endif
 }
 
 void
-gui_options_show(struct game *game, struct gui *gui)
+gui_options_show(struct gui *gui)
 {
-	WINDOW *opts_win;
+	mvwprintw(gui->options.options_win.win, 0, 0, "in options window");
+	wrefresh(gui->options.options_win.win);
 
-	opts_win = gui->options_win;
-	if (!opts_win) {
-		opts_win = newwin(10, 20, offset_top, CENTER(COLS, 20));
-	}
-
-	mvwprintw(opts_win, 0, 0, "in options window");
-	wrefresh(opts_win);
 	getch();
 
-	werase(opts_win);
-	wrefresh(opts_win);
-}
-
-void
-gui_destroy(struct gui *gui)
-{
-	int i;
-	ITEM **items;
-
-	if (gui->menu.menu) {
-		unpost_menu(gui->menu.menu);
-		items = menu_items(gui->menu.menu);
-		for(i = 0; i < (item_count(gui->menu.menu) + 1); ++i) {
-			free_item(items[i]);
-		}
-		free(items);
-		free_menu(gui->menu.menu);
-	}
-	if (gui->menu.menu_win) {
-		delwin(gui->menu.menu_win);
-	}
-	if (gui->game_win) {
-		delwin(gui->game_win);
-	}
-	if (gui->menu_bar_win) {
-		delwin(gui->menu_bar_win);
-	}
-	if (gui->game_over_win) {
-		delwin(gui->game_over_win);
-	}
-	if (gui->options_win) {
-		delwin(gui->options_win);
-	}
-	endwin();					/* End ncurses mode */
+	werase(gui->options.options_win.win);
+	wrefresh(gui->options.options_win.win);
 }
 
 static void
 gui_game_over_show(struct game *game, WINDOW *win)
 {
+#if 0
 	char *skull;
 	int len, i, col, col_start, row;
-	
+
 	skull = read_file(PATH_SKULL);
 	len = strlen(skull);
 	col = col_start = row = 0;
@@ -375,14 +412,15 @@ gui_game_over_show(struct game *game, WINDOW *win)
 	getch();
 	werase(win);
 	wrefresh(win);
+#endif
 }
 
 static void
-menu_size(MENU *menu, int *height, int *width)
+gui_menu_size_get(MENU *menu, int *width, int *height)
 {
 	int _width, mark_width;
 
-	_width = menu->width - 2; /* -2 because apparently the default mark gets taken into account ??? */
+	_width = menu->width - 2; /* -2 because apparently the default mark gets taken into account(?) */
 	if (menu_mark(menu) != NULL) {
 		mark_width = strlen(menu_mark(menu));
 		_width += mark_width;
@@ -392,17 +430,19 @@ menu_size(MENU *menu, int *height, int *width)
 }
 
 static void
-print_title(struct game *game, WINDOW *win, int row, int col)
+gui_print_title(struct gui *gui, WINDOW *win, int start_pos_y, int start_pos_x)
 {
-	int i, col_start;
+	int i;
+	int pos_x, pos_y;
 
-	col_start = col;
-	for (i = 0; i < game->title.len; ++i, ++col) {
-		if (game->title.title[i] == '\n') {
-			++row;
-			col = col_start - 1; // why -1 ????
+	pos_y = start_pos_y;
+	pos_x = start_pos_x;
+	for (i = 0; i < gui->title.data_len; ++i, ++pos_x) {
+		if (gui->title.data[i] == '\n') {
+			++pos_y;
+			pos_x = start_pos_x; /* -1 */
 		}
-		mvwprintw(win, row, col, "%lc", game->title.title[i]);
+		mvwprintw(win, pos_x, pos_y, "%lc", gui->title.data[i]);
 	}
 }
 
@@ -417,6 +457,7 @@ print_field(WINDOW *win, int row, int col, int color, uint32_t symbol)
 static void
 print_game_with_grid(struct game *game, WINDOW *win)
 {
+#if 0
 	int row, col, row_m, col_m, win_height, win_width;
 
 	win_height = (game->cfg.rows * 2) + 1;
@@ -485,11 +526,13 @@ print_game_with_grid(struct game *game, WINDOW *win)
 	//mvwprintw(win, row, col, "%lc", SYM_GRID_BR);
 
 	wrefresh(win);
+#endif
 }
 
 static void
 print_game_without_grid(struct game *game, WINDOW *win)
 {
+#if 0
 	int row, col;
 
 	for (row = 0; row < game->cfg.rows; ++row) {
@@ -497,24 +540,7 @@ print_game_without_grid(struct game *game, WINDOW *win)
 			print_field(win, row, col, COLOR_WHITE, SYM_FLAG_OFF);
 		}
 	}
+#endif
 }
 
-static void
-game_title_init(struct game *game)
-{
-	char *title;
-	int len;
-	size_t ucs4_len;
-
-	title = read_file(PATH_TITLE);
-	len = strlen(title);
-	if (is_valid_utf8(title, len)) {
-		game->title.title = utf8_to_ucs4(title, len, &ucs4_len);
-		game->title.len = ucs4_len;
-	} else {
-		game->title.title = NULL;
-		game->title.len = 0;
-	}
-	free(title);
-}
 

@@ -38,54 +38,6 @@ game_destroy(struct game *game)
 	matrix_free(game->playground.minefield);
 }
 
-static void
-game_state_init(struct game *game)
-{
-	int lvl;
-
-	lvl = game->config.difficulty.lvl;
-
-	game->game_state.state = GAME_STOPPED;
-	game->game_state.outcome = OUTCOME_DEFEAT;
-	game->game_state.fields_revealed = 0;
-	game->game_state.fields_to_reveal = (game->config.difficulty.lvl_rows[lvl] * game->config.difficulty.lvl_columns[lvl]) - game->config.difficulty.lvl_mines[lvl];
-}
-
-static void
-game_state_reinit(struct game *game)
-{
-	game_state_init(game);
-}
-
-static void
-game_config_init(struct game *game)
-{
-	// TODO Read config file into struct config
-	int lvl;
-
-	game->config.difficulty.lvl = LVL_BEGINNER;
-	lvl = game->config.difficulty.lvl;
-	game->config.difficulty.lvl_rows[lvl] = 10;
-	game->config.difficulty.lvl_columns[lvl] = 15;
-	game->config.difficulty.lvl_mines[lvl] = 85;
-
-	return;
-}
-
-static void
-game_playground_init(struct game *game)
-{
-	game_surface_init(game);
-	game_minefield_init(game);
-}
-
-static void
-game_playground_reinit(struct game *game)
-{
-	game_surface_reinit(game);
-	game_minefield_reinit(game);
-}
-
 int
 game_playground_reveal(struct game *game, int row, int column)
 {
@@ -181,6 +133,54 @@ struct controls *
 game_config_controls_get(struct game *game)
 {
 	return &game->config.controls;
+}
+
+static void
+game_state_init(struct game *game)
+{
+	int lvl;
+
+	lvl = game->config.difficulty.lvl;
+
+	game->game_state.state = GAME_STOPPED;
+	game->game_state.outcome = OUTCOME_DEFEAT;
+	game->game_state.fields_revealed = 0;
+	game->game_state.fields_to_reveal = (game->config.difficulty.lvl_rows[lvl] * game->config.difficulty.lvl_columns[lvl]) - game->config.difficulty.lvl_mines[lvl];
+}
+
+static void
+game_state_reinit(struct game *game)
+{
+	game_state_init(game);
+}
+
+static void
+game_config_init(struct game *game)
+{
+	// TODO Read config file into struct config
+	int lvl;
+
+	game->config.difficulty.lvl = LVL_BEGINNER;
+	lvl = game->config.difficulty.lvl;
+	game->config.difficulty.lvl_rows[lvl] = 10;
+	game->config.difficulty.lvl_columns[lvl] = 15;
+	game->config.difficulty.lvl_mines[lvl] = 85;
+
+	return;
+}
+
+static void
+game_playground_init(struct game *game)
+{
+	game_surface_init(game);
+	game_minefield_init(game);
+}
+
+static void
+game_playground_reinit(struct game *game)
+{
+	game_surface_reinit(game);
+	game_minefield_reinit(game);
 }
 
 static void

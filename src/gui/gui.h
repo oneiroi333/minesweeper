@@ -3,48 +3,44 @@
 
 #include <ncurses.h>
 #include <menu.h>
-#include "game.h"
+#include <stdint.h>
 
 /* Menu options */
-#define PLAY 0
-#define OPTIONS 1
-#define QUIT 2
+#define OPT_PLAY    0
+#define OPT_OPTIONS 1
+#define OPT_QUIT    2
 
-struct gui {
-	struct menu {
-		WINDOW *menu_win;
-		MENU *menu;
-	} menu;
-	WINDOW *game_win;
-	WINDOW *menu_bar_win;
-	WINDOW *game_over_win;
-	WINDOW *options_win;
+struct window {
+	WINDOW *win;
+	int pos_y;
+	int pos_x;
+	int width;
+	int height;
 };
 
-/*
- * Init ncurses stuff
- */
+struct gui {
+	struct gui_title {
+		struct window title_win;
+		uint32_t *data;
+		int data_len;
+	} title;
+	struct gui_menu {
+		struct window menu_win;
+		MENU *menu;
+	} menu;
+	struct gui_game {
+		struct window game_play_win;
+		struct window game_over_win;
+		struct window game_menu_bar_win;
+	} game;
+	struct gui_options {
+		struct window options_win;
+		int grid;
+	} options;
+};
+
 void gui_init(struct gui *gui);
-
-/*
- * Show main menu screen and handle player input.
- * Return selected menu option.
- */
-int gui_menu_show(struct game *game, struct gui *gui);
-
-/*
- * Show the actual game screen and handle player actions.
- */
-void gui_game_show(struct game *game, struct gui *gui);
-
-/*
- * Show options screen and handle player selection.
- */
-void gui_options_show(struct game *game, struct gui *gui);
-
-/*
- * Destroy all windows and ncurses
- */
+void gui_run(struct gui *gui);
 void gui_destroy(struct gui *gui);
 
 #endif /* GUI_H */

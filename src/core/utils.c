@@ -67,6 +67,7 @@ read_file(char *filename)
 int
 parse_config(struct config *cfg, char *path)
 {
+#if 0
 	FILE *fp;
 	char buf_line[CFG_MAX_LINE_LEN];
 	char buf_token[CFG_MAX_TOKEN_LEN];
@@ -88,6 +89,7 @@ parse_config(struct config *cfg, char *path)
 				break
 		}
 	}
+#endif
 
 	return 0;
 }
@@ -108,6 +110,7 @@ get_line(char *dst, int size, char *src)
 	return nchar;
 }
 
+#if 0
 char *
 get_token(char *dst, int size, char *src)
 {
@@ -118,4 +121,5 @@ get_token(char *dst, int size, char *src)
 
 	return token_len;
 }
+#endif
 

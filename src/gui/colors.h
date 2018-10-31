@@ -1,6 +1,8 @@
 #ifndef COLORS_H
 #define COLORS_H
 
+#define COLOR_COUNT   8
+
 /* Colors*/
 #define COLOR_BLACK   0
 #define COLOR_RED     1
