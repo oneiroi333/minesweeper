@@ -158,6 +158,15 @@ static void
 game_config_init(struct game *game)
 {
 	// TODO Read config file into struct config
+	//
+	game->config.controls.up = 107;
+	game->config.controls.down = 106;
+	game->config.controls.left = 104;
+	game->config.controls.right = 108;
+	game->config.controls.reveal = 100;
+	game->config.controls.toggle_flag = 102;
+	//
+	//
 	int lvl;
 
 	game->config.difficulty.lvl = LVL_BEGINNER;

@@ -2,7 +2,7 @@
 #define GRAPHICS_H
 
 /* Textual graphic files */
-#define PATH_TITLE "../../media/graphic/title"
-#define PATH_SKULL "../../media/graphic/skull"
+#define PATH_TITLE "media/graphics/title"
+#define PATH_SKULL "media/graphics/skull"
 
 #endif /* GRAPHICS_H */

@@ -43,7 +43,7 @@ extern struct game *game_p;
 		}				\
 	} while (0)
 
-int gui_menu_show(struct gui *gui);
+static int gui_menu_show(struct gui *gui);
 static void gui_game_show(struct gui *gui);
 static void gui_options_show(struct gui *gui);
 
@@ -70,6 +70,7 @@ gui_init(struct gui *gui)
 
 	/* Ncurses stuff */
 	initscr();					/* Init curses mode */
+	refresh();
 	noecho();					/* Dont echo input data */
 	curs_set(0);					/* Make cursor invisible */
 	cbreak();					/* Line buffering disabled, pass every char on */
@@ -85,6 +86,7 @@ gui_init(struct gui *gui)
 	gui->title.title_win.pos_y = 3;
 	gui->title.title_win.pos_x = CENTER(COLS, gui->title.title_win.width);
 	gui->title.title_win.win = newwin(gui->title.title_win.height, gui->title.title_win.width, gui->title.title_win.pos_y, gui->title.title_win.pos_x);
+
 	title = read_file(PATH_TITLE);
 	title_len = strlen(title);
 	if (is_valid_utf8(title, title_len)) {
@@ -195,7 +197,7 @@ gui_destroy(struct gui *gui)
 	endwin();
 }
 
-int
+static int
 gui_menu_show(struct gui *gui)
 {
 	int input;
