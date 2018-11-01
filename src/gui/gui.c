@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <locale.h>
 #include "gui.h"
 #include "utf8_lib.h"
 #include "colors.h"
@@ -8,8 +9,6 @@
 #include "symbols.h"
 #include "../core/game.h"
 #include "../core/utils.h"
-
-extern struct game *game_p;
 
 #ifdef KEY_ENTER
 #undef KEY_ENTER
@@ -30,32 +29,37 @@ extern struct game *game_p;
 		}				\
 	} while (0)
 
-#define COMPUTE_SYMBOL(val, symbol)		\
-	do {					\
-		if (val > 0) {			\
-			symbol = L'0' + val;	\
+#define COMPUTE_SYMBOL(val, symbol)			\
+	do {						\
+		if (val > 0) {				\
+			symbol = L'0' + val;		\
 		} else if (val == FIELD_FLAG_OFF) {	\
-			symbol = SYM_FLAG_OFF;	\
+			symbol = SYM_FLAG_OFF;		\
 		} else if (val == FIELD_FLAG_ON) {	\
-			symbol = SYM_FLAG_ON;	\
-		} else {			\
-			symbol = SYM_EMPTY;	\
-		}				\
+			symbol = SYM_FLAG_ON;		\
+		} else {				\
+			symbol = SYM_EMPTY;		\
+		}					\
 	} while (0)
+
+extern struct game *game_p;
+static struct controls *controls;
 
 static int gui_menu_show(struct gui *gui);
 static void gui_game_show(struct gui *gui);
 static void gui_options_show(struct gui *gui);
 
 static void gui_menu_size_get(MENU *menu, int *width, int *height);
-static void gui_print_title(struct gui *gui, WINDOW *win, int start_pos_y, int start_pos_x);
+static void gui_print_graphic(char *data, WINDOW *win, int start_pos_y, int start_pos_x);
+static void gui_print_char(WINDOW *win, int row, int col, int color, char character);
+static void gui_print_ucs4_graphic(uint32_t *data, int data_len, WINDOW *win, int start_pos_y, int start_pos_x);
+static void gui_print_ucs4_char(WINDOW *win, int row, int col, int color, uint32_t character);
+
+static void gui_print_minefield_grid_on(struct matrix *minefield, WINDOW *win);
+static void gui_print_minefield_grid_off(struct matrix *minefield, WINDOW *win);
 
 /*
-static void menu_size(MENU *menu, int *height, int *width);
-static void print_field(WINDOW *win, int row, int col, int color, uint32_t symbol);
 static void gui_game_over_show(struct game *game, WINDOW *win);
-static void print_game_with_grid(struct game *game, WINDOW *win);
-static void print_game_without_grid(struct game *game, WINDOW *win);
 */
 
 void
@@ -64,9 +68,11 @@ gui_init(struct gui *gui)
 	WINDOW *menu_win, *menu_sub_win;
 	MENU *menu;
 	ITEM **items;
-	int i, title_len;
+	int i, data_len;
 	size_t ucs4_len;
-	char *title;
+	char *data_raw;
+
+	setlocale(LC_ALL, "");
 
 	/* Ncurses stuff */
 	initscr();					/* Init curses mode */
@@ -80,35 +86,48 @@ gui_init(struct gui *gui)
 		init_pair(i, i, COLOR_BLACK);
 	}
 
+	/* Get game controls */
+	controls = game_config_controls_get(game_p);
+
+	/* Init skull */
+	gui->skull.skull_win.width = 44;		/* skull max line length */
+	gui->skull.skull_win.height = 20;		/* skull line count */
+
 	/* Init title */
 	gui->title.title_win.width = 126;		/* title max line length */
 	gui->title.title_win.height = 10;		/* title line count */
-	gui->title.title_win.pos_y = 3;
+	gui->title.title_win.pos_y = CENTER(LINES, (gui->title.title_win.height + 3 + gui->skull.skull_win.height));
 	gui->title.title_win.pos_x = CENTER(COLS, gui->title.title_win.width);
 	gui->title.title_win.win = newwin(gui->title.title_win.height, gui->title.title_win.width, gui->title.title_win.pos_y, gui->title.title_win.pos_x);
 
-	title = read_file(PATH_TITLE);
-	title_len = strlen(title);
-	if (is_valid_utf8(title, title_len)) {
-		gui->title.data = utf8_to_ucs4(title, title_len, &ucs4_len);
+	data_raw = read_file(PATH_TITLE);
+	data_len = strlen(data_raw);
+	if (is_valid_utf8(data_raw, data_len)) {
+		gui->title.data = utf8_to_ucs4(data_raw, data_len, &ucs4_len);
 		gui->title.data_len = ucs4_len;
 	} else {
 		gui->title.data = NULL;
 		gui->title.data_len = 0;
 	}
-	free(title);
+	free(data_raw);
+
+	/* Init skull */
+	gui->skull.skull_win.pos_y = CENTER(LINES, (gui->title.title_win.height + gui->skull.skull_win.height)) + gui->title.title_win.height;
+	gui->skull.skull_win.pos_x = gui->title.title_win.pos_x;
+	gui->skull.skull_win.win = newwin(gui->skull.skull_win.height, gui->skull.skull_win.width, gui->skull.skull_win.pos_y, gui->skull.skull_win.pos_x);
+
+	gui->skull.data = read_file(PATH_SKULL);
 
 	/* Init menu */
 	items = (ITEM **) malloc(4 * sizeof(ITEM *));
-	items[0] = new_item("PLAY", "");
-	items[1] = new_item("OPTIONS", "");
-	items[2] = new_item("QUIT", "");
+	items[0] = new_item("P L A Y", "");
+	items[1] = new_item("O P T I O N S", "");
+	items[2] = new_item("Q U I T", "");
 	items[3] = (ITEM *) NULL;
 	menu = new_menu(items);
-	set_menu_spacing(menu, 0, 2, 0);		/* Line spacing */
 	gui_menu_size_get(menu, &gui->menu.menu_win.width, &gui->menu.menu_win.height);
 
-	gui->menu.menu_win.pos_y = 16;
+	gui->menu.menu_win.pos_y = gui->title.title_win.pos_y + gui->title.title_win.height + CENTER(gui->skull.skull_win.height, gui->menu.menu_win.height);
 	gui->menu.menu_win.pos_x = CENTER(COLS, gui->menu.menu_win.width);
 
 	menu_win = newwin(gui->menu.menu_win.height, gui->menu.menu_win.width, gui->menu.menu_win.pos_y, gui->menu.menu_win.pos_x);
@@ -116,9 +135,9 @@ gui_init(struct gui *gui)
 	set_menu_win(menu, menu_win);
 	set_menu_sub(menu, menu_sub_win);
 	set_menu_mark(menu, "");
-	post_menu(menu);
 
 	gui->menu.menu_win.win = menu_win;
+	gui->menu.menu_sub_win.win = menu_sub_win;
 	gui->menu.menu = menu;
 
 	/* Init game */
@@ -128,6 +147,7 @@ gui_init(struct gui *gui)
 
 	/* Init options */
 	gui->options.options_win.win = newwin(10, 20, 16, CENTER(COLS, 20));
+	gui->options.grid = OPT_GRID_OFF;
 }
 
 void
@@ -164,7 +184,6 @@ gui_destroy(struct gui *gui)
 
 	/* Delete menu */
 	if (gui->menu.menu) {
-		unpost_menu(gui->menu.menu);
 		items = menu_items(gui->menu.menu);
 		for(i = 0; i < (item_count(gui->menu.menu) + 1); ++i) {
 			free_item(items[i]);
@@ -201,29 +220,37 @@ static int
 gui_menu_show(struct gui *gui)
 {
 	int input;
-	struct controls *controls;
-
-	controls = game_config_controls_get(game_p);
 
 	/* Print title */
 	wattron(gui->title.title_win.win, COLOR_PAIR(COLOR_RED));
-	gui_print_title(gui, gui->title.title_win.win, 0, 0);
+	gui_print_ucs4_graphic(gui->title.data, gui->title.data_len, gui->title.title_win.win, 0, 0);
 	wattroff(gui->title.title_win.win, COLOR_PAIR(COLOR_RED));
 	wrefresh(gui->title.title_win.win);
 
+	/* Print skull */
+	gui_print_graphic(gui->skull.data, gui->skull.skull_win.win, 0, 0);
+	wrefresh(gui->skull.skull_win.win);
+
 	/* Print menu*/
-	wrefresh(gui->menu.menu_win.win);
+	post_menu(gui->menu.menu);
+	wrefresh(gui->menu.menu_sub_win.win);
 	for(;;) {
 		input = getch();
 		if (input == controls->up) {
 			menu_driver(gui->menu.menu, REQ_UP_ITEM);
-			wrefresh(gui->menu.menu_win.win);
+			wrefresh(gui->menu.menu_sub_win.win);
 		} else if (input == controls->down) {
 			menu_driver(gui->menu.menu, REQ_DOWN_ITEM);
-			wrefresh(gui->menu.menu_win.win);
+			wrefresh(gui->menu.menu_sub_win.win);
 		} else if (input == controls->reveal) {
-			werase(gui->menu.menu_win.win);
+			/* Clear menu */
+			unpost_menu(gui->menu.menu);
+			wrefresh(gui->menu.menu_sub_win.win);
+			wclear(gui->menu.menu_win.win);
 			wrefresh(gui->menu.menu_win.win);
+			/* Clear skull */
+			wclear(gui->skull.skull_win.win);
+			wrefresh(gui->skull.skull_win.win);
 			return item_index(current_item(gui->menu.menu));
 		}
 	}
@@ -232,6 +259,21 @@ gui_menu_show(struct gui *gui)
 void
 gui_game_show(struct gui *gui)
 {
+	/* Print game field */
+	if (gui->options.grid == OPT_GRID_ON) {
+		gui_print_minefield_grid_on(game_p->playground.surface, gui->game.game_play_win.win);
+	} else {
+		gui_print_minefield_grid_off(game_p->playground.surface, gui->game.game_play_win.win);
+	}
+	wrefresh(gui->game.game_play_win.win);
+	getch();
+
+
+	/*
+	 * PLAY LOOP HERE
+	 */
+
+
 #if 0
 	WINDOW *game_win, *menu_bar_win, *game_over_win;
 	int game_win_height, game_win_width;
@@ -432,32 +474,62 @@ gui_menu_size_get(MENU *menu, int *width, int *height)
 }
 
 static void
-gui_print_title(struct gui *gui, WINDOW *win, int start_pos_y, int start_pos_x)
+gui_print_graphic(char *data, WINDOW *win, int start_pos_y, int start_pos_x)
+{
+	int i;
+	int pos_x, pos_y;
+	char *dp;
+
+	pos_y = start_pos_y;
+	pos_x = start_pos_x;
+	dp = data;
+	while (*dp) {
+		if (*dp == '\n') {
+			++pos_y;		/* move to next line */
+			pos_x = start_pos_x;	/* carriage return */
+			++dp;			/* skip newline */
+		}
+		mvwaddch(win, pos_y, pos_x++, *dp);
+		++dp;
+	}
+
+}
+
+static void
+gui_print_char(WINDOW *win, int row, int col, int color, char character)
+{
+	wattron(win, COLOR_PAIR(color));
+	mvwprintw(win, row, col, "%c", character);
+	wattroff(win, COLOR_PAIR(color));
+}
+
+static void
+gui_print_ucs4_graphic(uint32_t *data, int data_len, WINDOW *win, int start_pos_y, int start_pos_x)
 {
 	int i;
 	int pos_x, pos_y;
 
 	pos_y = start_pos_y;
 	pos_x = start_pos_x;
-	for (i = 0; i < gui->title.data_len; ++i, ++pos_x) {
-		if (gui->title.data[i] == '\n') {
+	for (i = 0; i < data_len; ++i, ++pos_x) {
+		if (data[i] == '\n') {
 			++pos_y;
-			pos_x = start_pos_x; /* -1 */
+			pos_x = start_pos_x - 1;
 		}
-		mvwprintw(win, pos_x, pos_y, "%lc", gui->title.data[i]);
+		mvwprintw(win, pos_y, pos_x, "%lc", data[i]);
 	}
 }
 
 static void
-print_field(WINDOW *win, int row, int col, int color, uint32_t symbol)
+gui_print_ucs4_char(WINDOW *win, int row, int col, int color, uint32_t character)
 {
 	wattron(win, COLOR_PAIR(color));
-	mvwprintw(win, row, col, "%lc", symbol);
+	mvwprintw(win, row, col, "%lc", character);
 	wattroff(win, COLOR_PAIR(color));
 }
 
 static void
-print_game_with_grid(struct game *game, WINDOW *win)
+gui_print_minefield_grid_on(struct matrix *minefield, WINDOW *win)
 {
 #if 0
 	int row, col, row_m, col_m, win_height, win_width;
@@ -532,17 +604,13 @@ print_game_with_grid(struct game *game, WINDOW *win)
 }
 
 static void
-print_game_without_grid(struct game *game, WINDOW *win)
+gui_print_minefield_grid_off(struct matrix *minefield, WINDOW *win)
 {
-#if 0
 	int row, col;
 
-	for (row = 0; row < game->cfg.rows; ++row) {
-		for (col = 0; col < game->cfg.columns; ++col) {
-			print_field(win, row, col, COLOR_WHITE, SYM_FLAG_OFF);
+	for (row = 0; row < minefield->rows; ++row) {
+		for (col = 0; col < minefield->columns; ++col) {
+			gui_print_ucs4_char(win, row, col, COLOR_WHITE, SYM_FLAG_OFF);
 		}
 	}
-#endif
 }
-
-

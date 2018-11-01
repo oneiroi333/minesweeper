@@ -10,6 +10,9 @@
 #define OPT_OPTIONS 1
 #define OPT_QUIT    2
 
+#define OPT_GRID_OFF 0
+#define OPT_GRID_ON  1
+
 struct window {
 	WINDOW *win;
 	int pos_y;
@@ -24,8 +27,13 @@ struct gui {
 		uint32_t *data;
 		int data_len;
 	} title;
+	struct gui_skull {
+		struct window skull_win;
+		char *data;
+	} skull;
 	struct gui_menu {
 		struct window menu_win;
+		struct window menu_sub_win;
 		MENU *menu;
 	} menu;
 	struct gui_game {
