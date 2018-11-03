@@ -5,7 +5,7 @@
 #define SYM_FLAG_OFF L'\u2591'
 #define SYM_FLAG_ON  L'\u2690'
 #define SYM_MINE     L'X'
-#define SYM_EMPTY    L' '
+#define SYM_EMPTY    L'\u00A0'
 
 /* Grid symbols */
 #define SYM_GRID_T  L'\u252c'	/* top */

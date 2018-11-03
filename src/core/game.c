@@ -38,6 +38,18 @@ game_destroy(struct game *game)
 	matrix_free(game->playground.minefield);
 }
 
+void
+game_start(struct game *game)
+{
+	game->game_state.state = GAME_RUNNING;
+}
+
+void
+game_quit(struct game *game)
+{
+	game_state_reinit(game);
+}
+
 int
 game_playground_reveal(struct game *game, int row, int column)
 {
@@ -101,6 +113,42 @@ game_playground_toggle_flag(struct game *game, int row, int column)
 	}
 }
 
+int
+game_playground_get(struct game *game, int row, int column)
+{
+	return matrix_get(game->playground.surface, row, column);
+}
+
+int
+game_playground_get_pos_y_player(struct game *game)
+{
+	return game->playground.pos_y_player;
+}
+
+int
+game_playground_get_pos_x_player(struct game *game)
+{
+	return game->playground.pos_x_player;
+}
+
+void
+game_playground_set_pos_y_player(struct game *game, int pos_y)
+{
+	game->playground.pos_y_player = pos_y;
+}
+
+void
+game_playground_set_pos_x_player(struct game *game, int pos_x)
+{
+	game->playground.pos_x_player = pos_x;
+}
+
+struct game_state *
+game_state_get(struct game *game)
+{
+	return &game->game_state;
+}
+
 void
 game_config_difficulty_set(struct game *game, struct difficulty *difficulty)
 {
@@ -142,7 +190,7 @@ game_state_init(struct game *game)
 
 	lvl = game->config.difficulty.lvl;
 
-	game->game_state.state = GAME_STOPPED;
+	game->game_state.state = GAME_ABORTED;
 	game->game_state.outcome = OUTCOME_DEFEAT;
 	game->game_state.fields_revealed = 0;
 	game->game_state.fields_to_reveal = (game->config.difficulty.lvl_rows[lvl] * game->config.difficulty.lvl_columns[lvl]) - game->config.difficulty.lvl_mines[lvl];
@@ -174,8 +222,6 @@ game_config_init(struct game *game)
 	game->config.difficulty.lvl_rows[lvl] = 10;
 	game->config.difficulty.lvl_columns[lvl] = 15;
 	game->config.difficulty.lvl_mines[lvl] = 85;
-
-	return;
 }
 
 static void
@@ -183,6 +229,8 @@ game_playground_init(struct game *game)
 {
 	game_surface_init(game);
 	game_minefield_init(game);
+	game->playground.pos_y_player = 0;
+	game->playground.pos_x_player = 0;
 }
 
 static void
@@ -190,6 +238,8 @@ game_playground_reinit(struct game *game)
 {
 	game_surface_reinit(game);
 	game_minefield_reinit(game);
+	game->playground.pos_y_player = 0;
+	game->playground.pos_x_player = 0;
 }
 
 static void

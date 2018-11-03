@@ -10,8 +10,13 @@
 #define OPT_OPTIONS 1
 #define OPT_QUIT    2
 
+/* Options */
 #define OPT_GRID_OFF 0
 #define OPT_GRID_ON  1
+
+/* Messages */
+#define MSG_VICTORY "YOU DID ESCAPE THIS TIME! ARGH.."
+#define MSG_DEFEAT "ANOTHER SOUL FOR MY COLLECTION! MUAHAHAHAHA!!!"
 
 struct window {
 	WINDOW *win;
