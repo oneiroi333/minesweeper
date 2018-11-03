@@ -91,7 +91,7 @@ gui_init(struct gui *gui)
 	}
 
 #ifdef DEBUG
-	dbg_win = newwin(10, 20, 0, 0);
+	dbg_win = newwin(15, 30, 0, 0);
 	box(dbg_win, '|', '-');
 #endif
 
@@ -162,9 +162,9 @@ gui_init(struct gui *gui)
 	gui->game.game_play_win.win = newwin(gui->game.game_play_win.height, gui->game.game_play_win.width, gui->game.game_play_win.pos_y, gui->game.game_play_win.pos_x);
 
 	gui->game.game_over_win.height = 5;
-	gui->game.game_over_win.width = 20;
-	gui->game.game_over_win.pos_y = CENTER(LINES, 5);
-	gui->game.game_over_win.pos_x = CENTER(COLS, 20);
+	gui->game.game_over_win.width = 40;
+	gui->game.game_over_win.pos_y = CENTER(LINES, gui->game.game_over_win.height);
+	gui->game.game_over_win.pos_x = CENTER(COLS, gui->game.game_over_win.width);
 	gui->game.game_over_win.win = newwin(gui->game.game_over_win.height, gui->game.game_over_win.width, gui->game.game_over_win.pos_y, gui->game.game_over_win.pos_x);
 
 	// TODO
@@ -175,6 +175,12 @@ void
 gui_run(struct gui *gui)
 {
 	int choice, first_round;
+
+	/* Print title */
+	wattron(gui->title.title_win.win, COLOR_PAIR(COLOR_RED));
+	gui_print_ucs4_graphic(gui->title.data, gui->title.data_len, gui->title.title_win.win, 0, 0);
+	wattroff(gui->title.title_win.win, COLOR_PAIR(COLOR_RED));
+	wrefresh(gui->title.title_win.win);
 
 	first_round = 1;
 	do {
@@ -249,16 +255,16 @@ gui_destroy(struct gui *gui)
 static int
 gui_menu_show(struct gui *gui)
 {
+#ifdef DEBUG
+	wclear(dbg_win);
+	mvwprintw(dbg_win, 5, 1, "%s", "in gui_menu_show");
+	wrefresh(dbg_win);
+#endif
 	struct controls *controls;
 	int input;
 
 	controls = game_config_controls_get(game_p);
 
-	/* Print title */
-	wattron(gui->title.title_win.win, COLOR_PAIR(COLOR_RED));
-	gui_print_ucs4_graphic(gui->title.data, gui->title.data_len, gui->title.title_win.win, 0, 0);
-	wattroff(gui->title.title_win.win, COLOR_PAIR(COLOR_RED));
-	wrefresh(gui->title.title_win.win);
 
 	/* Print skull */
 	gui_print_graphic(gui->skull.data, gui->skull.skull_win.win, 0, 0);
@@ -267,6 +273,7 @@ gui_menu_show(struct gui *gui)
 	/* Print menu*/
 	post_menu(gui->menu.menu);
 	wrefresh(gui->menu.menu_sub_win.win);
+
 	for(;;) {
 		input = getch();
 		if (input == controls->up) {
@@ -281,12 +288,13 @@ gui_menu_show(struct gui *gui)
 		} else if (input == controls->reveal) {
 			/* Clear menu */
 			unpost_menu(gui->menu.menu);
-			wrefresh(gui->menu.menu_sub_win.win);
+			//wrefresh(gui->menu.menu_sub_win.win);
 			wclear(gui->menu.menu_win.win);
 			wrefresh(gui->menu.menu_win.win);
 			/* Clear skull */
 			wclear(gui->skull.skull_win.win);
 			wrefresh(gui->skull.skull_win.win);
+			/* Return menu choice */
 			return item_index(current_item(gui->menu.menu));
 		}
 	}
@@ -295,6 +303,11 @@ gui_menu_show(struct gui *gui)
 void
 gui_game_show(struct gui *gui)
 {
+#ifdef DEBUG
+	wclear(dbg_win);
+	mvwprintw(dbg_win, 5, 1, "%s", "in gui_game_show");
+	wrefresh(dbg_win);
+#endif
 	struct game_state *game_state;
 	struct controls *controls;
 	struct difficulty *difficulty;
@@ -333,6 +346,9 @@ gui_game_show(struct gui *gui)
 		input = getch();
 		gui_handle_player_input(gui, difficulty, controls, input);
 	} while (game_state->state == GAME_RUNNING);
+
+	wclear(gui->game.game_play_win.win);
+	wrefresh(gui->game.game_play_win.win);
 #ifdef DEBUG
 		mvwprintw(dbg_win, 1, 1, "input: %d", input);
 		mvwprintw(dbg_win, 2, 1, "state: %d", game_state->state);
@@ -346,39 +362,52 @@ gui_game_show(struct gui *gui)
 	} else if (game_state->state == GAME_ABORTED) {
 		/* Player left the game before it was over */
 		// display something on the menu window? like: run coward run! :)
+		;
 	}
 }
 
 void
 gui_options_show(struct gui *gui)
 {
+#ifdef DEBUG
+	wclear(dbg_win);
+	mvwprintw(dbg_win, 5, 1, "%s", "in gui_options_show");
+	wrefresh(dbg_win);
+#endif
 	mvwprintw(gui->options.options_win.win, 0, 0, "in options window");
 	wrefresh(gui->options.options_win.win);
 
 	getch();
 
-	werase(gui->options.options_win.win);
+	wclear(gui->options.options_win.win);
 	wrefresh(gui->options.options_win.win);
 }
 
 static void
 gui_game_over_show(struct gui *gui, int outcome)
 {
+#ifdef DEBUG
+	wclear(dbg_win);
+	mvwprintw(dbg_win, 5, 1, "%s", "in gui_game_over_show");
+	wrefresh(dbg_win);
+#endif
 	WINDOW * win;
 
 	win = gui->game.game_over_win.win;
 
 	if (outcome == OUTCOME_DEFEAT) {
-		wattron(win, COLOR_PAIR(COLOR_GREEN));
-		mvwprintw(win, 15, 60, "%s", MSG_VICTORY);
-		wattroff(win, COLOR_PAIR(COLOR_GREEN));
-	} else {
 		wattron(win, COLOR_PAIR(COLOR_RED));
-		mvwprintw(win, 15, 60, "%s", MSG_DEFEAT);
+		mvwprintw(win, 0, 0, "%s", MSG_DEFEAT);
 		wattroff(win, COLOR_PAIR(COLOR_RED));
+	} else {
+		wattron(win, COLOR_PAIR(COLOR_GREEN));
+		mvwprintw(win, 0, 0, "%s", MSG_VICTORY);
+		wattroff(win, COLOR_PAIR(COLOR_GREEN));
 	}
 	wrefresh(win);
+
 	getch();
+
 	wclear(win);
 	wrefresh(win);
 }
@@ -395,10 +424,15 @@ gui_handle_player_input(struct gui *gui, struct difficulty *difficulty, struct c
 	pos_y_player = game_playground_get_pos_y_player(game_p);
 	pos_x_player = game_playground_get_pos_x_player(game_p);
 
-	/* Remove highlight of the old field */
+	/* Remove highlight of the current field */
 	field_val = game_playground_get(game_p, pos_y_player, pos_x_player);
 	COMPUTE_COLOR(field_val, color);
 	COMPUTE_SYMBOL(field_val, symbol);
+#ifdef DEBUG
+	mvwprintw(dbg_win, 6, 1, "field_val: %d", field_val);
+	mvwprintw(dbg_win, 7, 1, "color: %d", color);
+	mvwprintw(dbg_win, 8, 1, "symbol: %lc", symbol);
+#endif
 	gui_print_ucs4_char(game_play_win, pos_y_player, pos_x_player, color, symbol);
 	wrefresh(game_play_win);
 
