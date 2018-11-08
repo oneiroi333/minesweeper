@@ -10,7 +10,9 @@
 #include "../core/game.h"
 #include "../core/utils.h"
 
+#if 0
 #define DEBUG
+#endif
 
 #ifdef KEY_ENTER
 #undef KEY_ENTER
@@ -62,8 +64,8 @@ static void gui_print_char(WINDOW *win, int row, int col, int color, char charac
 static void gui_print_ucs4_graphic(uint32_t *data, int data_len, WINDOW *win, int start_pos_y, int start_pos_x);
 static void gui_print_ucs4_char(WINDOW *win, int row, int col, int color, uint32_t character);
 
-static void gui_print_minefield_grid_on(struct matrix *minefield, WINDOW *win);
-static void gui_print_minefield_grid_off(struct matrix *minefield, WINDOW *win);
+static void gui_print_minefield_grid_on(WINDOW *win);
+static void gui_print_minefield_grid_off(WINDOW *win);
 
 void
 gui_init(struct gui *gui)
@@ -91,8 +93,9 @@ gui_init(struct gui *gui)
 	}
 
 #ifdef DEBUG
-	dbg_win = newwin(15, 30, 0, 0);
+	dbg_win = newwin(30, COLS, 0, 0);
 	box(dbg_win, '|', '-');
+	wrefresh(dbg_win);
 #endif
 
 	/* Init skull */
@@ -147,7 +150,11 @@ gui_init(struct gui *gui)
 	gui->menu.menu = menu;
 
 	/* Init options */
-	gui->options.options_win.win = newwin(10, 20, 16, CENTER(COLS, 20));
+	gui->options.options_win.height = 13; // number of lines in options
+	gui->options.options_win.width = 18; // longest line width
+	gui->options.options_win.pos_y = CENTER(LINES, (gui->title.title_win.height + gui->options.options_win.height)) + gui->title.title_win.height;
+	gui->options.options_win.pos_x = CENTER(COLS, gui->options.options_win.width);
+	gui->options.options_win.win = newwin(gui->options.options_win.height, gui->options.options_win.width, gui->options.options_win.pos_y, gui->options.options_win.pos_x);
 	gui->options.grid = OPT_GRID_OFF;
 
 	/* Init game */
@@ -161,9 +168,9 @@ gui_init(struct gui *gui)
 	/* set window size before game start depending on the size of the minefield (currently done) OR set a max width and height for the minefield and init the window here with max size */
 	gui->game.game_play_win.win = newwin(gui->game.game_play_win.height, gui->game.game_play_win.width, gui->game.game_play_win.pos_y, gui->game.game_play_win.pos_x);
 
-	gui->game.game_over_win.height = 5;
-	gui->game.game_over_win.width = 40;
-	gui->game.game_over_win.pos_y = CENTER(LINES, gui->game.game_over_win.height);
+	gui->game.game_over_win.height = 6;
+	gui->game.game_over_win.width = 35;
+	gui->game.game_over_win.pos_y = CENTER(LINES, (gui->title.title_win.height + gui->game.game_over_win.height)) + gui->title.title_win.height;
 	gui->game.game_over_win.pos_x = CENTER(COLS, gui->game.game_over_win.width);
 	gui->game.game_over_win.win = newwin(gui->game.game_over_win.height, gui->game.game_over_win.width, gui->game.game_over_win.pos_y, gui->game.game_over_win.pos_x);
 
@@ -189,8 +196,8 @@ gui_run(struct gui *gui)
 			case OPT_PLAY:
 				if (!first_round) {
 					game_reinit(game_p);
-					first_round = 0;
 				}
+				first_round = 0;
 				game_start(game_p);
 				gui_game_show(gui);
 				break;
@@ -265,7 +272,6 @@ gui_menu_show(struct gui *gui)
 
 	controls = game_config_controls_get(game_p);
 
-
 	/* Print skull */
 	gui_print_graphic(gui->skull.data, gui->skull.skull_win.win, 0, 0);
 	wrefresh(gui->skull.skull_win.win);
@@ -306,6 +312,19 @@ gui_game_show(struct gui *gui)
 #ifdef DEBUG
 	wclear(dbg_win);
 	mvwprintw(dbg_win, 5, 1, "%s", "in gui_game_show");
+
+	int i, j;
+	struct difficulty * diff;
+	struct game_state *state;
+	diff = game_config_difficulty_get(game_p);
+	state = game_state_get(game_p);
+	mvwprintw(dbg_win, 10, 1, "rows: %d", diff->lvl_rows[diff->lvl]);
+	mvwprintw(dbg_win, 11, 1, "cols: %d", diff->lvl_columns[diff->lvl]);
+	for (i = 0; i < diff->lvl_rows[diff->lvl]; ++i) {
+		for (j = 0; j < diff->lvl_columns[diff->lvl]; ++j) {
+			mvwprintw(dbg_win, i + 15, j + 1, "%d", game_p->playground.minefield->table[i][j]);
+		}
+	}
 	wrefresh(dbg_win);
 #endif
 	struct game_state *game_state;
@@ -319,9 +338,9 @@ gui_game_show(struct gui *gui)
 
 	/* Print game field */
 	if (gui->options.grid == OPT_GRID_ON) {
-		gui_print_minefield_grid_on(game_p->playground.surface, gui->game.game_play_win.win);
+		gui_print_minefield_grid_on(gui->game.game_play_win.win);
 	} else {
-		gui_print_minefield_grid_off(game_p->playground.surface, gui->game.game_play_win.win);
+		gui_print_minefield_grid_off(gui->game.game_play_win.win);
 	}
 
 	game_state = game_state_get(game_p);
@@ -341,6 +360,8 @@ gui_game_show(struct gui *gui)
 		mvwprintw(dbg_win, 2, 1, "state: %d", game_state->state);
 		mvwprintw(dbg_win, 3, 1, "pos_y: %2d", game_playground_get_pos_y_player(game_p));
 		mvwprintw(dbg_win, 4, 1, "pos_x: %2d", game_playground_get_pos_x_player(game_p));
+		mvwprintw(dbg_win, 12, 1, "fields to reveal: %d", state->fields_to_reveal);
+		mvwprintw(dbg_win, 13, 1, "fields revealed: %d", state->fields_revealed);
 		wrefresh(dbg_win);
 #endif
 		input = getch();
@@ -354,6 +375,8 @@ gui_game_show(struct gui *gui)
 		mvwprintw(dbg_win, 2, 1, "state: %d", game_state->state);
 		mvwprintw(dbg_win, 3, 1, "pos_y: %2d", game_playground_get_pos_y_player(game_p));
 		mvwprintw(dbg_win, 4, 1, "pos_x: %2d", game_playground_get_pos_x_player(game_p));
+		mvwprintw(dbg_win, 12, 1, "fields to reveal: %d", state->fields_to_reveal);
+		mvwprintw(dbg_win, 13, 1, "fields revealed: %d", state->fields_revealed);
 		wrefresh(dbg_win);
 #endif
 
@@ -374,11 +397,37 @@ gui_options_show(struct gui *gui)
 	mvwprintw(dbg_win, 5, 1, "%s", "in gui_options_show");
 	wrefresh(dbg_win);
 #endif
-	mvwprintw(gui->options.options_win.win, 0, 0, "in options window");
+	WINDOW *options_win;
+	struct controls *controls;
+	struct difficulty *diff;
+
+	options_win = gui->options.options_win.win;
+	controls = game_config_controls_get(game_p);
+	diff = game_config_difficulty_get(game_p);
+
+	/* Print skull */
+	gui_print_graphic(gui->skull.data, gui->skull.skull_win.win, 0, 0);
+	wrefresh(gui->skull.skull_win.win);
+
+	/* Print options */
+	wattron(options_win, COLOR_PAIR(COLOR_RED));
+	mvwprintw(options_win, 0, 0, "=== CONTROLS ===");
+	wattroff(options_win, COLOR_PAIR(COLOR_RED));
+	mvwprintw(options_win, 1, 0, "UP: %s", keyname(controls->up));
+	mvwprintw(options_win, 2, 0, "DOWN: %s", keyname(controls->down));
+	mvwprintw(options_win, 3, 0, "LEFT: %s", keyname(controls->left));
+	mvwprintw(options_win, 4, 0, "RIGHT: %s", keyname(controls->right));
+	mvwprintw(options_win, 5, 0, "REVEAL: %s", keyname(controls->reveal));
+	mvwprintw(options_win, 6, 0, "TOGGLE FLAG: %s", keyname(controls->toggle_flag));
+	wattron(options_win, COLOR_PAIR(COLOR_RED));
+	mvwprintw(options_win, 8, 0, "=== PLAYGROUND ===");
+	wattroff(options_win, COLOR_PAIR(COLOR_RED));
+	mvwprintw(options_win, 9, 0, "ROWS: %d", diff->lvl_rows[diff->lvl]);
+	mvwprintw(options_win, 10, 0, "COLUMNS: %d", diff->lvl_columns[diff->lvl]);
+	mvwprintw(options_win, 11, 0, "MINES: %d", diff->lvl_mines[diff->lvl]);
+	mvwprintw(options_win, 12, 0, "GRID: %s", gui->options.grid == OPT_GRID_ON ? "ON" : "OFF");
 	wrefresh(gui->options.options_win.win);
-
 	getch();
-
 	wclear(gui->options.options_win.win);
 	wrefresh(gui->options.options_win.win);
 }
@@ -393,21 +442,27 @@ gui_game_over_show(struct gui *gui, int outcome)
 #endif
 	WINDOW * win;
 
-	win = gui->game.game_over_win.win;
+	/* Print skull */
+	gui_print_graphic(gui->skull.data, gui->skull.skull_win.win, 0, 0);
+	wrefresh(gui->skull.skull_win.win);
 
+	/* Print outcome message */
+	win = gui->game.game_over_win.win;
 	if (outcome == OUTCOME_DEFEAT) {
 		wattron(win, COLOR_PAIR(COLOR_RED));
-		mvwprintw(win, 0, 0, "%s", MSG_DEFEAT);
+		mvwprintw(win, 2, 2, "%s", MSG_DEFEAT);
+		mvwprintw(win, 3, 2, "%s", MSG_LAUGH);
+		box(gui->game.game_over_win.win, '|', '-');
 		wattroff(win, COLOR_PAIR(COLOR_RED));
 	} else {
 		wattron(win, COLOR_PAIR(COLOR_GREEN));
-		mvwprintw(win, 0, 0, "%s", MSG_VICTORY);
+		mvwprintw(win, 2, 2, "%s", MSG_VICTORY_1);
+		mvwprintw(win, 3, 2, "%s", MSG_VICTORY_2);
+		box(gui->game.game_over_win.win, '|', '-');
 		wattroff(win, COLOR_PAIR(COLOR_GREEN));
 	}
 	wrefresh(win);
-
 	getch();
-
 	wclear(win);
 	wrefresh(win);
 }
@@ -428,13 +483,11 @@ gui_handle_player_input(struct gui *gui, struct difficulty *difficulty, struct c
 	field_val = game_playground_get(game_p, pos_y_player, pos_x_player);
 	COMPUTE_COLOR(field_val, color);
 	COMPUTE_SYMBOL(field_val, symbol);
-#ifdef DEBUG
-	mvwprintw(dbg_win, 6, 1, "field_val: %d", field_val);
-	mvwprintw(dbg_win, 7, 1, "color: %d", color);
-	mvwprintw(dbg_win, 8, 1, "symbol: %lc", symbol);
-#endif
-	gui_print_ucs4_char(game_play_win, pos_y_player, pos_x_player, color, symbol);
-	wrefresh(game_play_win);
+	if (gui->options.grid == OPT_GRID_OFF) {
+		gui_print_ucs4_char(game_play_win, pos_y_player, pos_x_player, color, symbol);
+	} else {
+		gui_print_ucs4_char(game_play_win, pos_y_player * 2 + 1, pos_x_player * 2 + 1, color, symbol);
+	}
 
 	/* Compute new pos */
 	if (input == controls->up) {
@@ -467,14 +520,20 @@ gui_handle_player_input(struct gui *gui, struct difficulty *difficulty, struct c
 
 	/* Hightlight the new field */
 	field_val = game_playground_get(game_p, pos_y_player, pos_x_player);
-highlight:
 	COMPUTE_SYMBOL(field_val, symbol);
+highlight:
 	if (gui->options.grid == OPT_GRID_OFF) {
 		gui_print_ucs4_char(game_play_win, pos_y_player, pos_x_player, COLOR_RED, symbol);
 	} else {
-		gui_print_ucs4_char(game_play_win, pos_y_player * 2, pos_x_player * 2, COLOR_RED, symbol);
+		gui_print_ucs4_char(game_play_win, pos_y_player * 2 + 1, pos_x_player * 2 + 1, COLOR_RED, symbol);
 	}
 	wrefresh(game_play_win);
+
+#ifdef DEBUG
+	mvwprintw(dbg_win, 6, 1, "field_val: %2d", field_val);
+	mvwprintw(dbg_win, 7, 1, "color: %2d", color);
+	mvwprintw(dbg_win, 8, 1, "symbol: %lc", symbol);
+#endif
 }
 
 static void
@@ -547,7 +606,7 @@ gui_print_ucs4_char(WINDOW *win, int row, int col, int color, uint32_t character
 }
 
 static void
-gui_print_minefield_grid_on(struct matrix *minefield, WINDOW *win)
+gui_print_minefield_grid_on(WINDOW *win)
 {
 	int row, col, row_m, col_m, win_height, win_width;
 	struct difficulty *diff;
@@ -622,12 +681,14 @@ gui_print_minefield_grid_on(struct matrix *minefield, WINDOW *win)
 }
 
 static void
-gui_print_minefield_grid_off(struct matrix *minefield, WINDOW *win)
+gui_print_minefield_grid_off(WINDOW *win)
 {
 	int row, col;
+	struct difficulty *diff;
 
-	for (row = 0; row < minefield->rows; ++row) {
-		for (col = 0; col < minefield->columns; ++col) {
+	diff = game_config_difficulty_get(game_p);
+	for (row = 0; row < diff->lvl_rows[diff->lvl]; ++row) {
+		for (col = 0; col < diff->lvl_columns[diff->lvl]; ++col) {
 			gui_print_ucs4_char(win, row, col, COLOR_WHITE, SYM_FLAG_OFF);
 		}
 	}

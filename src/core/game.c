@@ -19,8 +19,8 @@ static void game_minefield_set_numbers(struct game *game);
 void
 game_init(struct game *game)
 {
-	game_state_init(game);
 	game_config_init(game);
+	game_state_init(game);
 	game_playground_init(game);
 }
 
@@ -89,9 +89,10 @@ game_playground_reveal(struct game *game, int row, int column)
 		// 	else if the field is empty
 		// 		call this function for the field
 		matrix_set(game->playground.surface, row, column, field_val);
+		game->game_state.fields_revealed++;
 		return FIELD_EMPTY; // delete after implementation
 	}
-	/* More then one surface field has been updated */
+	/* TODO More then one surface field has been updated */
 	return FIELD_MULTIPLE;
 }
 
@@ -205,7 +206,7 @@ game_state_reinit(struct game *game)
 static void
 game_config_init(struct game *game)
 {
-	// TODO Read config file into struct config
+	// TODO Read config file
 	//
 	game->config.controls.up = 107;
 	game->config.controls.down = 106;
@@ -219,9 +220,9 @@ game_config_init(struct game *game)
 
 	game->config.difficulty.lvl = LVL_BEGINNER;
 	lvl = game->config.difficulty.lvl;
-	game->config.difficulty.lvl_rows[lvl] = 10;
-	game->config.difficulty.lvl_columns[lvl] = 15;
-	game->config.difficulty.lvl_mines[lvl] = 85;
+	game->config.difficulty.lvl_rows[lvl] = 8;
+	game->config.difficulty.lvl_columns[lvl] = 12;
+	game->config.difficulty.lvl_mines[lvl] = 25;
 }
 
 static void
@@ -284,7 +285,6 @@ game_minefield_init(struct game *game)
 		matrix_set(game->playground.minefield, row, column, FIELD_MINE);
 	}
 	free(rnd_pos);
-
 	game_minefield_set_numbers(game);
 }
 
@@ -312,118 +312,121 @@ game_minefield_reinit(struct game *game)
 static void
 game_minefield_set_numbers(struct game *game)
 {
-	int i, j, lvl;
+	int i, j;
+	int lvl, lvl_rows, lvl_columns;
 
 	lvl = game->config.difficulty.lvl;
-	for (i = 0; i < game->config.difficulty.lvl_rows[lvl]; ++i) {
-		for (j = 0; j < game->config.difficulty.lvl_columns[lvl]; ++j) {
+	lvl_rows = game->config.difficulty.lvl_rows[lvl];
+	lvl_columns = game->config.difficulty.lvl_columns[lvl];
+	for (i = 0; i < lvl_rows; ++i) {
+		for (j = 0; j < lvl_columns; ++j) {
 			if (matrix_get(game->playground.minefield, i, j) != FIELD_MINE) {
 				// Top left corner
 				if (i == 0 && j == 0) {
 					if (matrix_get(game->playground.minefield, 0, 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, 1, 0) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, 1, 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 				}
 				// Top right corner
-				if (i == 0 && j == (game->config.difficulty.lvl_columns[lvl] - 1)) {
+				if (i == 0 && j == (lvl_columns - 1)) {
 					if (matrix_get(game->playground.minefield, 0, game->config.difficulty.lvl_columns[lvl] - 2) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, 1, game->config.difficulty.lvl_columns[lvl] - 2) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, 1, game->config.difficulty.lvl_columns[lvl] - 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 				}
 				// Bottom left corner
-				if (i == (game->config.difficulty.lvl_rows[lvl] - 1) && j == 0) {
+				if (i == (lvl_rows - 1) && j == 0) {
 					if (matrix_get(game->playground.minefield, game->config.difficulty.lvl_rows[lvl] - 2, 0) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, game->config.difficulty.lvl_rows[lvl] - 2, 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, game->config.difficulty.lvl_rows[lvl] - 1, 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 				}
 				// Bottom right corner
-				if (i == (game->config.difficulty.lvl_rows[lvl] - 1) && j == (game->config.difficulty.lvl_columns[lvl] - 1)) {
+				if (i == (lvl_rows - 1) && j == (lvl_columns - 1)) {
 					if (matrix_get(game->playground.minefield, game->config.difficulty.lvl_rows[lvl] - 2, game->config.difficulty.lvl_columns[lvl] - 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, game->config.difficulty.lvl_rows[lvl] - 2, game->config.difficulty.lvl_columns[lvl] - 2) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, game->config.difficulty.lvl_rows[lvl] - 1, game->config.difficulty.lvl_columns[lvl] - 2) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 				}
 				// Top row
-				if (i == 0 && j > 0 && j < (game->config.difficulty.lvl_columns[lvl] - 1)) {
+				if (i == 0 && j > 0 && j < (lvl_columns - 1)) {
 					if (matrix_get(game->playground.minefield, i, j - 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i, j + 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i + 1, j - 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i + 1, j) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i + 1, j + 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 				}
 				// Right row
-				if (j == (game->config.difficulty.lvl_columns[lvl] - 1) && i > 0 && i < (game->config.difficulty.lvl_rows[lvl] - 1)) {
+				if (j == (lvl_columns - 1) && i > 0 && i < (lvl_rows - 1)) {
 					if (matrix_get(game->playground.minefield, i - 1, j - 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i - 1, j) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i, j - 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i + 1, j - 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i + 1, j) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 				}
 				// Bottom row
-				if (i == (game->config.difficulty.lvl_rows[lvl] - 1) && j > 0 && j < (game->config.difficulty.lvl_columns[lvl] - 1)) {
+				if (i == (lvl_rows - 1) && j > 0 && j < (lvl_columns - 1)) {
 					if (matrix_get(game->playground.minefield, i - 1, j - 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i - 1, j) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i - 1, j + 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i, j - 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i, j + 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 				}
 				// Left row
-				if (j == 0 && i > 0 && i < (game->config.difficulty.lvl_rows[lvl] - 1)) {
+				if (j == 0 && i > 0 && i < (lvl_rows - 1)) {
 					if (matrix_get(game->playground.minefield, i - 1, j) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i - 1, j + 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i, j + 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i + 1, j) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i + 1, j + 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 				}
 				// Inner field
-				if (i > 0 && i < (game->config.difficulty.lvl_rows[lvl] - 1) && j > 0 && j < (game->config.difficulty.lvl_columns[lvl] - 1)) {
+				if (i > 0 && i < (lvl_rows - 1) && j > 0 && j < (lvl_columns - 1)) {
 					if (matrix_get(game->playground.minefield, i - 1, j - 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i - 1, j) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i - 1, j + 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i, j - 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i, j + 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i + 1, j - 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i + 1, j) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 					if (matrix_get(game->playground.minefield, i + 1, j + 1) == FIELD_MINE)
-						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j));
+						matrix_set(game->playground.minefield, i, j, matrix_get(game->playground.minefield, i, j) + 1);
 				}
 			}
 		}
