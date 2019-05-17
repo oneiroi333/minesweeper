@@ -21,11 +21,10 @@ Wi.~!X$?!-~    : ?$$$B$Wu("**$RM!
 $R@i.~~ !     :   ~$$$$$B$$en:``
 ?MXT@Wx.~    :     ~"##*$$$$M~
 
-
 Watch your steps or you will be past!
 
 Dependencies (libraries):
 
 * ncurses
 * tinfo
-* menu </br>
+* menu
