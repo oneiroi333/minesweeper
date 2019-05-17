@@ -1,5 +1,4 @@
 # The lurking death
-(under construction)
 
                       :::!~!!!!!:.
                   .xUHWH!! !!?M88WHX:.
@@ -24,7 +23,7 @@ $R@i.~~ !     :   ~$$$$$B$$en:``
 
 Watch your steps or you will be past!
 
-Dependencies (libraries):  
-- ncurses  
-- tinfo  
-- menu
+Dependencies (libraries): </br>
+- ncurses </br>
+- tinfo </br>
+- menu </br>
