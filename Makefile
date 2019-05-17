@@ -1,5 +1,5 @@
 OBJ = main.o game.o matrix.o utils.o gui.o utf8_lib.o
-VPATH = src src/core src/gui test
+VPATH = src src/core src/gui
 NAME = the_lurking_death
 BASEDIR = $(PWD)
 
