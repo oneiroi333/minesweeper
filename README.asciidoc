@@ -24,7 +24,7 @@ $R@i.~~ !     :   ~$$$$$B$$en:``
 
 Watch your steps or you will be past!
 
-Dependencies (libraries):\
-- ncurses\
-- tinfo\
+Dependencies (libraries):  
+- ncurses  
+- tinfo  
 - menu
