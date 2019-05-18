@@ -6,6 +6,8 @@
 /*
  * Create integer array filled with unique random numbers
  * min, max values are included
+ *
+ * Returns a pointer to allocated memory, so you have to free it after use
  */
 int *get_unique_rnd_array(int min, int max, int size);
 
@@ -13,19 +15,8 @@ int *get_unique_rnd_array(int min, int max, int size);
  * Reads the content of a file into a dynamic allocated buffer.
  * Returns the starting address of the buffer.
  *
- * If you dont need the buffer anymore you should free it with the standard 'free' function.
+ * Returns a pointer to allocated memory, so you have to free it after use
  */
 char *read_file(char *filename);
-
-/*
- * Parse config
- */
-int parse_config(struct config *cfg, char *path);
-
-/*
- * Read a line from src into dst
- * Returns number of chars
- */
-int get_line(char *dst, int size, char *src);
 
 #endif /* UTILS_H */

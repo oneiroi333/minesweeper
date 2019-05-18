@@ -13,9 +13,11 @@ $(NAME): $(OBJ)
 tests:
 	cd test && mkdir tests && cd tests
 	gcc $(BASEDIR)/test/test_matrix.c $(BASEDIR)/src/core/matrix.c -o $(BASEDIR)/test/tests/matrix
+	gcc $(BASEDIR)/test/test_utils.c $(BASEDIR)/src/core/utils.c -o $(BASEDIR)/test/tests/utils
 
 run_tests:
 	$(BASEDIR)/test/tests/matrix
+	$(BASEDIR)/test/tests/utils
 
 clean:
 	rm -f $(NAME)

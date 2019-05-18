@@ -432,3 +432,37 @@ game_minefield_set_numbers(struct game *game)
 		}
 	}
 }
+
+int
+game_parse_config_file(struct config *cfg, char *path)
+{
+
+#if 0
+#define CFG_MAX_LINE_LEN 100
+#define CFG_MAX_TOKEN_LEN 10
+
+	FILE *fp;
+	char buf_line[CFG_MAX_LINE_LEN];
+	char buf_token[CFG_MAX_TOKEN_LEN];
+	char *src;
+
+	fp = fopen(path, "r");
+	if (fp == NULL ) {
+		return -1;
+	}
+	while (get_line(buf_line, CFG_MAX_LINE_LEN, path)) {
+		src = buf_line;
+		src = get_token(buf_token, CFG_MAX_TOKEN_LEN, src);
+		switch (buf_token) {
+			case "token starts with bla do this":
+				// read next value tokens
+				break
+			case "token that":
+				// read next value tokens
+				break
+		}
+	}
+#endif
+
+	return 0;
+}
