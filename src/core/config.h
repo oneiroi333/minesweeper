@@ -4,6 +4,8 @@
 #include "difficulty.h"
 #include "controls.h"
 
+#define PATH_CONFIG_FILE "./config"
+
 struct config {
 	struct difficulty difficulty;
 	struct controls controls;

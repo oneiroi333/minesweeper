@@ -1,8 +1,8 @@
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "game.h"
 #include "utils.h"
-
-#define PATH_CONFIG_FILE "config"
 
 static void game_state_init(struct game *game);
 static void game_state_reinit(struct game *game);
@@ -55,12 +55,12 @@ game_playground_reveal(struct game *game, int row, int column)
 {
 	int field_val, i, j, nmines;
 
+	/* The field is already revealed */
 	if (matrix_get(game->playground.surface, row, column) >= 0) {
 		return FIELD_REVEALED;
 	}
-	/*
-	 * Update game state, check win condition
-	 */
+
+	/* Update game state, check win condition */
 	field_val = matrix_get(game->playground.minefield, row, column);
 	if (field_val > 0) {
 		if (field_val != FIELD_MINE) {
@@ -76,20 +76,25 @@ game_playground_reveal(struct game *game, int row, int column)
 		}
 		return field_val;
 	}
-	/*
-	 * as long as we get an empty field call the reveal funtion
-	 *
-	 * If the field is an empty field recursively reveal the empty fields connected to it
-	 */
+
+	/* If the field is empty call this function for all of its neighbours */
 	if (field_val == FIELD_EMPTY) {
+		/* Reveal self */
+		matrix_set(game->playground.surface, row, column, field_val);
+		game->game_state.fields_revealed++;
+		/* Reveal every neighbour cell */
+		/* WRONG neightbour cell could be mine !!!!!*/
+
+
+
+
+
 		// TODO recursive reveal:
 		// for every neighbour cell
 		// 	if field is a number
 		// 		reveal the field
 		// 	else if the field is empty
 		// 		call this function for the field
-		matrix_set(game->playground.surface, row, column, field_val);
-		game->game_state.fields_revealed++;
 		return FIELD_EMPTY; // delete after implementation
 	}
 	/* TODO More then one surface field has been updated */
@@ -206,23 +211,65 @@ game_state_reinit(struct game *game)
 static void
 game_config_init(struct game *game)
 {
-	// TODO Read config file
-	//
+	int lvl, nitems, value, i;
+	FILE *cfg_file;
+	char line[48], key[20];
+
+	/* Fallback config
+	 * Overwritten by config file options
+	 */
 	game->config.controls.up = 107;
 	game->config.controls.down = 106;
 	game->config.controls.left = 104;
 	game->config.controls.right = 108;
 	game->config.controls.reveal = 100;
 	game->config.controls.toggle_flag = 102;
-	//
-	//
-	int lvl;
-
 	game->config.difficulty.lvl = LVL_BEGINNER;
-	lvl = game->config.difficulty.lvl;
-	game->config.difficulty.lvl_rows[lvl] = 8;
-	game->config.difficulty.lvl_columns[lvl] = 12;
-	game->config.difficulty.lvl_mines[lvl] = 25;
+	for (i = 0; i < 3; ++i) {
+		game->config.difficulty.lvl_rows[i] = difficulties[i][0];
+		game->config.difficulty.lvl_columns[i] = difficulties[i][1];
+		game->config.difficulty.lvl_mines[i] = difficulties[i][2];
+	}
+
+	cfg_file = fopen(PATH_CONFIG_FILE, "r");
+	if (cfg_file != NULL) {
+		/* Read lines from config file */
+		while (fgets(line, 48, cfg_file) != NULL) {
+			/* Ignore lines starting with # */
+			if (line[0] != '#') {
+				/* nitems must be 2, because we always need 1 key and 1 value for a config option */
+				if ((nitems = sscanf(line, "%19s%d", &key, &value)) == 2) {
+					/* Null terminate key string */
+					key[19] = '\0';
+
+					if (strcmp(key, "UP") == 0) {
+						game->config.controls.up = value;
+					} else if (strcmp(key, "DOWN") == 0) {
+						game->config.controls.down = value;
+					} else if (strcmp(key, "LEFT") == 0) {
+						game->config.controls.left = value;
+					} else if (strcmp(key, "RIGHT") == 0) {
+						game->config.controls.right = value;
+					} else if (strcmp(key, "REVEAL") == 0) {
+						game->config.controls.reveal = value;
+					} else if (strcmp(key, "TOGGLE_FLAG") == 0) {
+						game->config.controls.toggle_flag = value;
+					} else if (strcmp(key, "DIFFICULTY") == 0) {
+						game->config.difficulty.lvl = value;
+					} else if (strcmp(key, "ROWS") == 0) {
+						game->config.difficulty.lvl = LVL_CUSTOM;
+						game->config.difficulty.lvl_rows[game->config.difficulty.lvl] = value;
+					} else if (strcmp(key, "COLUMNS") == 0) {
+						game->config.difficulty.lvl = LVL_CUSTOM;
+						game->config.difficulty.lvl_columns[game->config.difficulty.lvl] = value;
+					} else if (strcmp(key, "MINES") == 0) {
+						game->config.difficulty.lvl = LVL_CUSTOM;
+						game->config.difficulty.lvl_mines[game->config.difficulty.lvl] = value;
+					}
+				}
+			}
+		}
+	}
 }
 
 static void

@@ -1,0 +1,28 @@
+# Lines starting with # get ignored
+
+# Default Controls
+#
+# (VIM like)
+# UP key: k
+# DOWN key: j
+# LEFT key: h
+# RIGHT	key: l
+# TOGGLE_FLAG key: f
+# REVEAL key: d
+UP			107
+DOWN		106
+LEFT		104
+RIGHT		108
+REVEAL 		100
+TOGGLE_FLAG 102
+
+# Default Difficulty (preset size and mine count)
+# 0 - Beginner
+# 1 - Advanced
+# 2 - Expert
+DIFFICULTY 0
+
+# Custom size and mine count
+# ROWS 40
+# COLUMNS 50
+# MINES 99

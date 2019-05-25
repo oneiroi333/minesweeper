@@ -14,4 +14,6 @@ struct difficulty {
 	int lvl_mines[4];
 };
 
+extern const int difficulties[3][3];
+
 #endif /* DIFFICULTY_H */
