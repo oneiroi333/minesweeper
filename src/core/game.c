@@ -6,6 +6,7 @@
 
 static void game_state_init(struct game *game);
 static void game_state_reinit(struct game *game);
+static void game_state_set_state(struct game *game, int state);
 static void game_config_init(struct game *game);
 static void game_playground_init(struct game *game);
 static void game_playground_reinit(struct game *game);
@@ -47,7 +48,7 @@ game_start(struct game *game)
 void
 game_quit(struct game *game)
 {
-	game_state_reinit(game);
+	game_state_set_state(game, GAME_ABORTED);
 }
 
 int
@@ -213,8 +214,7 @@ game_state_init(struct game *game)
 	int lvl;
 
 	lvl = game->config.difficulty.lvl;
-
-	game->game_state.state = GAME_ABORTED;
+	game->game_state.state = GAME_OVER;
 	game->game_state.outcome = OUTCOME_DEFEAT;
 	game->game_state.fields_revealed = 0;
 	game->game_state.fields_to_reveal = (game->config.difficulty.lvl_rows[lvl] * game->config.difficulty.lvl_columns[lvl]) - game->config.difficulty.lvl_mines[lvl];
@@ -224,6 +224,12 @@ static void
 game_state_reinit(struct game *game)
 {
 	game_state_init(game);
+}
+
+static void
+game_state_set_state(struct game *game, int state)
+{
+	game->game_state.state = state;
 }
 
 static void

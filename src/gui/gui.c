@@ -471,13 +471,15 @@ static void
 gui_handle_player_input(struct gui *gui, struct difficulty *difficulty, struct controls *controls, int input)
 {
 	WINDOW *game_play_win;
-	int pos_y_player, pos_x_player;
-	int field_val, color;
+	int pos_y_player, pos_x_player, new_pos_y_player, new_pos_x_player, field_val, color, multiple, i, j;
 	uint32_t symbol;
 
 	game_play_win = gui->game.game_play_win.win;
 	pos_y_player = game_playground_get_pos_y_player(game_p);
 	pos_x_player = game_playground_get_pos_x_player(game_p);
+	new_pos_y_player = pos_y_player;
+	new_pos_x_player = pos_x_player;
+	multiple = 0;
 
 	/* Remove highlight of the current field */
 	field_val = game_playground_get(game_p, pos_y_player, pos_x_player);
@@ -492,40 +494,66 @@ gui_handle_player_input(struct gui *gui, struct difficulty *difficulty, struct c
 	/* Compute new pos */
 	if (input == controls->up) {
 		if (pos_y_player > 0) {
-			--pos_y_player;
+			new_pos_y_player = pos_y_player - 1;
 		}
 	} else if (input == controls->down) {
 		if (pos_y_player < difficulty->lvl_rows[difficulty->lvl] - 1) {
-			++pos_y_player;
+			new_pos_y_player = pos_y_player + 1;
 		}
 	} else if (input == controls->left) {
 		if (pos_x_player > 0) {
-			--pos_x_player;
+			new_pos_x_player = pos_x_player - 1;
 		}
 	} else if (input == controls->right) {
 		if (pos_x_player < difficulty->lvl_columns[difficulty->lvl] - 1) {
-			++pos_x_player;
+			new_pos_x_player = pos_x_player + 1;
 		}
 	} else if (input == controls->reveal) {
 		field_val = game_playground_reveal(game_p, pos_y_player, pos_x_player);
-		goto highlight;
+		if (field_val == FIELD_MULTIPLE) {
+			multiple = 1;
+		}
 	} else if (input == controls->toggle_flag) {
 		game_playground_toggle_flag(game_p, pos_y_player, pos_x_player);
 	} else if (input == KEY_F(1)) {
 		game_quit(game_p);
 	}
+	game_playground_set_pos_y_player(game_p, new_pos_y_player);
+	game_playground_set_pos_x_player(game_p, new_pos_x_player);
 
-	game_playground_set_pos_y_player(game_p, pos_y_player);
-	game_playground_set_pos_x_player(game_p, pos_x_player);
-
-	/* Hightlight the new field */
-	field_val = game_playground_get(game_p, pos_y_player, pos_x_player);
-	COMPUTE_SYMBOL(field_val, symbol);
-highlight:
-	if (gui->options.grid == OPT_GRID_OFF) {
-		gui_print_ucs4_char(game_play_win, pos_y_player, pos_x_player, COLOR_RED, symbol);
+	if (multiple) {
+		for (i = 0; i < difficulty->lvl_rows[difficulty->lvl]; ++i) {
+			for (j = 0; j < difficulty->lvl_columns[difficulty->lvl]; ++j) {
+				if (i == new_pos_y_player && j == new_pos_x_player) {
+					/* Hightlight the new field */
+					field_val = game_playground_get(game_p, i, j);
+					COMPUTE_SYMBOL(field_val, symbol);
+					if (gui->options.grid == OPT_GRID_OFF) {
+						gui_print_ucs4_char(game_play_win, i, j, COLOR_RED, symbol);
+					} else {
+						gui_print_ucs4_char(game_play_win, i * 2 + 1, j * 2 + 1, COLOR_RED, symbol);
+					}
+				} else {
+					field_val = game_playground_get(game_p, i, j);
+					COMPUTE_COLOR(field_val, color);
+					COMPUTE_SYMBOL(field_val, symbol);
+					if (gui->options.grid == OPT_GRID_OFF) {
+						gui_print_ucs4_char(game_play_win, i, j, color, symbol);
+					} else {
+						gui_print_ucs4_char(game_play_win, i * 2 + 1, j * 2 + 1, color, symbol);
+					}
+				}
+			}
+		}
 	} else {
-		gui_print_ucs4_char(game_play_win, pos_y_player * 2 + 1, pos_x_player * 2 + 1, COLOR_RED, symbol);
+		/* Hightlight the new field */
+		field_val = game_playground_get(game_p, new_pos_y_player, new_pos_x_player);
+		COMPUTE_SYMBOL(field_val, symbol);
+		if (gui->options.grid == OPT_GRID_OFF) {
+			gui_print_ucs4_char(game_play_win, new_pos_y_player, new_pos_x_player, COLOR_RED, symbol);
+		} else {
+			gui_print_ucs4_char(game_play_win, new_pos_y_player * 2 + 1, new_pos_x_player * 2 + 1, COLOR_RED, symbol);
+		}
 	}
 	wrefresh(game_play_win);
 
