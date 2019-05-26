@@ -56,11 +56,14 @@ struct controls *game_config_controls_get(struct game *game);
 void game_config_controls_set(struct game *game, struct controls *controls);
 
 /*
- * Updates game_state
+ * Reveals one or more fields
+ * Checks for hitting a mine 
+ *
  * Returns:
- * 	1-8: number of mines around field
- * 	9: player hit a mine
- * 	-1: Field is already revealed
+ * 	FIELD_REVEALED: if field is already revealed
+ * 	FIELD_MULTIPLE: if multiple fields got revealed in the process
+ * 	FIELD_MINE: if a mine got revealed
+ * 	1-8: field number in case of a single reveal
  */
 int game_playground_reveal(struct game *game, int row, int column);
 void game_playground_toggle_flag(struct game *game, int row, int column);

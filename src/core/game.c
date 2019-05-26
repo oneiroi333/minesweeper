@@ -53,7 +53,7 @@ game_quit(struct game *game)
 int
 game_playground_reveal(struct game *game, int row, int column)
 {
-	int field_val, i, j, nmines;
+	int field_val, tot_rows, tot_cols, i, j, multiple;
 
 	/* The field is already revealed */
 	if (matrix_get(game->playground.surface, row, column) >= 0) {
@@ -82,23 +82,41 @@ game_playground_reveal(struct game *game, int row, int column)
 		/* Reveal self */
 		matrix_set(game->playground.surface, row, column, field_val);
 		game->game_state.fields_revealed++;
-		/* Reveal every neighbour cell */
-		/* WRONG neightbour cell could be mine !!!!!*/
 
-
-
-
-
-		// TODO recursive reveal:
-		// for every neighbour cell
-		// 	if field is a number
-		// 		reveal the field
-		// 	else if the field is empty
-		// 		call this function for the field
-		return FIELD_EMPTY; // delete after implementation
+		/* Reveal every neighbour cell
+		 * If the neighbour cell is another empty field call this function for it
+		 * else reveal the number
+		 */
+		tot_rows = game->playground.minefield->rows;
+		tot_cols = game->playground.minefield->columns;
+		multiple = 0;
+		for (i = row - 1; i <= row + 1; ++i) {
+			for (j = column - 1; j <= column + 1; ++j) {
+				/* Skip self */
+				if (i == row && j == column) {
+					continue;
+				}
+				if (i >= 0 && i < tot_rows && j >= 0 && j < tot_cols) { /* Check that field is in game boundaries */
+					/* Neighbour cell is already revealed */
+					if (matrix_get(game->playground.surface, i, j) >= 0) {
+						continue;
+					}
+					field_val = matrix_get(game->playground.minefield, i, j);
+					if (field_val != FIELD_EMPTY) {
+						matrix_set(game->playground.surface, i, j, field_val);
+						game->game_state.fields_revealed++;
+					} else { /* Reveal empty neighbour cells recursively */
+						multiple = 1; /* We reveal more than 1 field */
+						game_playground_reveal(game, i, j);
+					}
+				}
+			}
+		}
 	}
-	/* TODO More then one surface field has been updated */
-	return FIELD_MULTIPLE;
+	if (multiple) {
+		return FIELD_MULTIPLE;
+	}
+	return FIELD_EMPTY;
 }
 
 void
