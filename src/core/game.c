@@ -61,7 +61,6 @@ game_playground_reveal(struct game *game, int row, int column)
 		return FIELD_REVEALED;
 	}
 
-	/* Update game state, check win condition */
 	field_val = matrix_get(game->playground.minefield, row, column);
 	if (field_val > 0) {
 		if (field_val != FIELD_MINE) {
@@ -78,11 +77,15 @@ game_playground_reveal(struct game *game, int row, int column)
 		return field_val;
 	}
 
-	/* If the field is empty call this function for all of its neighbours */
+	/* If the field is empty, reveal all of its neighbours */
 	if (field_val == FIELD_EMPTY) {
 		/* Reveal self */
 		matrix_set(game->playground.surface, row, column, field_val);
 		game->game_state.fields_revealed++;
+		if (game->game_state.fields_revealed == game->game_state.fields_to_reveal) {
+			game->game_state.state = GAME_OVER;
+			game->game_state.outcome = OUTCOME_VICTORY;
+		}
 
 		/* Reveal every neighbour cell
 		 * If the neighbour cell is another empty field call this function for it
@@ -102,10 +105,16 @@ game_playground_reveal(struct game *game, int row, int column)
 					if (matrix_get(game->playground.surface, i, j) >= 0) {
 						continue;
 					}
+					/* Get value of neighbour cell */
 					field_val = matrix_get(game->playground.minefield, i, j);
+					/* If its not an empty cell, reveal it and check the win condition */
 					if (field_val != FIELD_EMPTY) {
 						matrix_set(game->playground.surface, i, j, field_val);
 						game->game_state.fields_revealed++;
+						if (game->game_state.fields_revealed == game->game_state.fields_to_reveal) {
+							game->game_state.state = GAME_OVER;
+							game->game_state.outcome = OUTCOME_VICTORY;
+						}
 					} else { /* Reveal empty neighbour cells recursively */
 						multiple = 1; /* We reveal more than 1 field */
 						game_playground_reveal(game, i, j);

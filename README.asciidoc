@@ -26,6 +26,6 @@ Watch your steps or you will be past!
 
 Dependencies (libraries):
 
-* ncurses
+* ncursesw
 * tinfo
 * menu

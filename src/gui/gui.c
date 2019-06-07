@@ -56,6 +56,7 @@ static int gui_menu_show(struct gui *gui);
 static void gui_game_show(struct gui *gui);
 static void gui_options_show(struct gui *gui);
 static void gui_game_over_show(struct gui *gui, int outcome);
+static void gui_game_aborted_show(struct gui *gui);
 
 static void gui_handle_player_input(struct gui *gui, struct difficulty *difficulty, struct controls *controls, int input);
 static void gui_menu_size_get(MENU *menu, int *width, int *height);
@@ -174,8 +175,8 @@ gui_init(struct gui *gui)
 	gui->game.game_over_win.pos_x = CENTER(COLS, gui->game.game_over_win.width);
 	gui->game.game_over_win.win = newwin(gui->game.game_over_win.height, gui->game.game_over_win.width, gui->game.game_over_win.pos_y, gui->game.game_over_win.pos_x);
 
-	// TODO
-	gui->game.game_menu_bar_win.win = NULL;
+	/* Menu bar */
+	gui->game.game_menu_bar_win.win = newwin(1, 126, CENTER(LINES, (gui->title.title_win.height + 3 + gui->skull.skull_win.height + 3 + 1)), CENTER(COLS, gui->title.title_win.width));
 }
 
 void
@@ -294,7 +295,6 @@ gui_menu_show(struct gui *gui)
 		} else if (input == controls->reveal) {
 			/* Clear menu */
 			unpost_menu(gui->menu.menu);
-			//wrefresh(gui->menu.menu_sub_win.win);
 			wclear(gui->menu.menu_win.win);
 			wrefresh(gui->menu.menu_win.win);
 			/* Clear skull */
@@ -333,8 +333,8 @@ gui_game_show(struct gui *gui)
 	int input;
 
 	/* Print menu bar */
-	//mvwprintw(gui->game.game_menu_bar_win.win, 0, 0, "%s", "F1: MENU");
-	//wrefresh(menu_bar_win);
+	mvwprintw(gui->game.game_menu_bar_win.win, 0, 0, "%s", "F1: MENU");
+	wrefresh(gui->game.game_menu_bar_win.win);
 
 	/* Print game field */
 	if (gui->options.grid == OPT_GRID_ON) {
@@ -357,7 +357,7 @@ gui_game_show(struct gui *gui)
 	do {
 #ifdef DEBUG
 		mvwprintw(dbg_win, 1, 1, "input: %d", input);
-		mvwprintw(dbg_win, 2, 1, "state: %d", game_state->state);
+		mvwprintw(dbg_win, 2, 1, "state: %s", game_state->state == GAME_RUNNING ? "GAME_RUNNING" : game_state->state == GAME_OVER ? "GAME_OVER" : "GAME_ABORTED");
 		mvwprintw(dbg_win, 3, 1, "pos_y: %2d", game_playground_get_pos_y_player(game_p));
 		mvwprintw(dbg_win, 4, 1, "pos_x: %2d", game_playground_get_pos_x_player(game_p));
 		mvwprintw(dbg_win, 12, 1, "fields to reveal: %d", state->fields_to_reveal);
@@ -368,11 +368,15 @@ gui_game_show(struct gui *gui)
 		gui_handle_player_input(gui, difficulty, controls, input);
 	} while (game_state->state == GAME_RUNNING);
 
+	/* Clear game window */
 	wclear(gui->game.game_play_win.win);
 	wrefresh(gui->game.game_play_win.win);
+	/* Clear menubar window */
+	wclear(gui->game.game_menu_bar_win.win);
+	wrefresh(gui->game.game_menu_bar_win.win);
 #ifdef DEBUG
 		mvwprintw(dbg_win, 1, 1, "input: %d", input);
-		mvwprintw(dbg_win, 2, 1, "state: %d", game_state->state);
+		mvwprintw(dbg_win, 2, 1, "state: %s", game_state->state == GAME_RUNNING ? "GAME_RUNNING" : game_state->state == GAME_OVER ? "GAME_OVER" : "GAME_ABORTED");
 		mvwprintw(dbg_win, 3, 1, "pos_y: %2d", game_playground_get_pos_y_player(game_p));
 		mvwprintw(dbg_win, 4, 1, "pos_x: %2d", game_playground_get_pos_x_player(game_p));
 		mvwprintw(dbg_win, 12, 1, "fields to reveal: %d", state->fields_to_reveal);
@@ -383,9 +387,7 @@ gui_game_show(struct gui *gui)
 	if (game_state->state == GAME_OVER) {
 		gui_game_over_show(gui, game_state->outcome);
 	} else if (game_state->state == GAME_ABORTED) {
-		/* Player left the game before it was over */
-		// display something on the menu window? like: run coward run! :)
-		;
+		gui_game_aborted_show(gui);
 	}
 }
 
@@ -468,6 +470,33 @@ gui_game_over_show(struct gui *gui, int outcome)
 }
 
 static void
+gui_game_aborted_show(struct gui *gui)
+{
+#ifdef DEBUG
+	wclear(dbg_win);
+	mvwprintw(dbg_win, 5, 1, "%s", "in gui_game_over_show");
+	wrefresh(dbg_win);
+#endif
+	WINDOW * win;
+
+	/* Print skull */
+	gui_print_graphic(gui->skull.data, gui->skull.skull_win.win, 0, 0);
+	wrefresh(gui->skull.skull_win.win);
+
+	/* Print aborted message */
+	win = gui->game.game_over_win.win;
+	wattron(win, COLOR_PAIR(COLOR_RED));
+	mvwprintw(win, 2, 2, "%s", MSG_ABORTED_1);
+	mvwprintw(win, 3, 2, "%s", MSG_ABORTED_2);
+	box(gui->game.game_over_win.win, '|', '-');
+	wattroff(win, COLOR_PAIR(COLOR_RED));
+	wrefresh(win);
+	getch();
+	wclear(win);
+	wrefresh(win);
+}
+
+static void
 gui_handle_player_input(struct gui *gui, struct difficulty *difficulty, struct controls *controls, int input)
 {
 	WINDOW *game_play_win;
@@ -510,7 +539,7 @@ gui_handle_player_input(struct gui *gui, struct difficulty *difficulty, struct c
 		}
 	} else if (input == controls->reveal) {
 		field_val = game_playground_reveal(game_p, pos_y_player, pos_x_player);
-		if (field_val == FIELD_MULTIPLE) {
+		if (field_val == FIELD_MULTIPLE || field_val == FIELD_EMPTY) {
 			multiple = 1;
 		}
 	} else if (input == controls->toggle_flag) {

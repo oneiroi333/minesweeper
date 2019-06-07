@@ -15,10 +15,12 @@
 #define OPT_GRID_ON  1
 
 /* Messages */
-#define MSG_VICTORY_1 "YOU DID ESCAPE!"
+#define MSG_VICTORY_1 "YOU DID ESCAPE! ARGH..."
 #define MSG_VICTORY_2 "I'LL GET YOU NEXT TIME!"
 #define MSG_DEFEAT "ANOTHER SOUL FOR MY COLLECTION!"
 #define MSG_LAUGH "MUAHAHAHAHA!!!"
+#define MSG_ABORTED_1 "YOU CAN RUN BUT YOU CAN'T HIDE,"
+#define MSG_ABORTED_2 "BITCH!"
 
 struct window {
 	WINDOW *win;
