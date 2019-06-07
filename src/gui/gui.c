@@ -221,7 +221,17 @@ gui_destroy(struct gui *gui)
 	if (gui->title.title_win.win) {
 		delwin(gui->title.title_win.win);
 	}
-	free(gui->title.data);
+	if (gui->title.data) {
+		free(gui->title.data);
+	}
+
+	/* Delete skull */
+	if (gui->skull.skull_win.win) {
+		delwin(gui->skull.skull_win.win);
+	}
+	if (gui->skull.data) {
+		free(gui->skull.data);
+	}
 
 	/* Delete menu */
 	if (gui->menu.menu) {
