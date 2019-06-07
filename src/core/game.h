@@ -72,6 +72,5 @@ int game_playground_get_pos_y_player(struct game *game);
 int game_playground_get_pos_x_player(struct game *game);
 void game_playground_set_pos_y_player(struct game *game, int pos_y);
 void game_playground_set_pos_x_player(struct game *game, int pos_x);
-int game_parse_config_file(struct config *cfg, char *path);
 
 #endif /* GAME_H */
